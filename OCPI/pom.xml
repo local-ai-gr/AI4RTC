@@ -1,0 +1,117 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>gr.nsofias</groupId>
+    <artifactId>OCPI</artifactId>
+    <version>17.1.0</version>
+    <packaging>war</packaging>
+    <name>OCPI17</name>
+    
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.release>17</maven.compiler.release>
+        <jakartaee.version>10.0.0</jakartaee.version>
+        <jersey.version>3.1.8</jersey.version>
+    </properties>
+    
+    <dependencies>
+        <!-- Jakarta EE API -->
+        <dependency>
+            <groupId>jakarta.platform</groupId>
+            <artifactId>jakarta.jakartaee-api</artifactId>
+            <version>${jakartaee.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Jersey Core and Implementation -->
+        <dependency>
+            <groupId>org.glassfish.jersey.core</groupId>
+            <artifactId>jersey-server</artifactId>
+            <version>${jersey.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jersey.containers</groupId>
+            <artifactId>jersey-container-servlet</artifactId>
+            <version>${jersey.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jersey.inject</groupId>
+            <artifactId>jersey-hk2</artifactId>
+            <version>${jersey.version}</version>
+        </dependency>
+
+        <!-- JAXB Dependencies -->
+        <dependency>
+            <groupId>jakarta.xml.bind</groupId>
+            <artifactId>jakarta.xml.bind-api</artifactId>
+            <version>3.0.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jaxb</groupId>
+            <artifactId>jaxb-runtime</artifactId>
+            <version>3.0.1</version>
+        </dependency>
+
+        <!-- Custom Library -->
+        <dependency>
+            <groupId>gr.nsofias</groupId>
+            <artifactId>nsofiasLib</artifactId>
+            <version>17.1.0</version>
+            <type>jar</type>
+        </dependency>
+    </dependencies>
+    
+    <build>
+        <finalName>OCPI_2</finalName>
+        <plugins>
+            <!-- Compiler Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <release>${maven.compiler.release}</release>
+                    <compilerArgs>
+                        <arg>-Xlint</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+
+            <!-- WAR Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>3.4.0</version>
+                <configuration>
+                    <failOnMissingWebXml>false</failOnMissingWebXml>
+                </configuration>
+            </plugin>
+
+            <!-- Dependency Plugin (Optional for Endorsed Directory) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.8.1</version>
+                <executions>
+                    <execution>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/endorsed</outputDirectory>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>jakarta.platform</groupId>
+                                    <artifactId>jakarta.jakartaee-api</artifactId>
+                                    <version>${jakartaee.version}</version>
+                                    <type>jar</type>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
