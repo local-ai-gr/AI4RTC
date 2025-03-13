@@ -4,7 +4,6 @@ getters\CdrData.class
 org\netbeans\rest\application\config\ApplicationConfig.class
 simulation\ChargingSession.class
 model\Session.class
-simulation\ChargingEvent.class
 main\KWResource.class
 model\Location.class
 model\CDR$CdrData1.class
@@ -28,6 +27,8 @@ model\CDR.class
 model\CDR$CdrData1$Cost.class
 simulation\EventType.class
 main\GanntObj.class
+simulation\Event.class
+simulation\DimensionType.class
 main\MyServletListener.class
 model\StatsObj.class
 model\ChargingPeriod.class

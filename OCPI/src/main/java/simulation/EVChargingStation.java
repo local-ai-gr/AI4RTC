@@ -1,17 +1,15 @@
 package simulation;
 
+import com.google.gson.Gson;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
-import java.util.function.Predicate;
 import static java.util.stream.Collectors.toList;
 
 /*
@@ -32,8 +30,8 @@ public class EVChargingStation {
     private final String[] connectorIds;
     private final Random random = new Random();
     private final List<ChargingSession> sessions = new ArrayList<>();
-    private final List<ChargingEvent> events = new ArrayList<>();
-    private final Map<String, ChargingSession> activeSessionsByConnector = new HashMap<>();
+    private final List<Event> events = new ArrayList<>();
+    //private final Map<String, ChargingSession> activeSessionsByConnector = new HashMap<>();
 
     public EVChargingStation(String stationId, String[] connectorIds) {
         this.connectorIds = connectorIds;
@@ -65,24 +63,22 @@ public class EVChargingStation {
             Optional<String> connectorId_ = Arrays.asList(connectorIds).stream().filter(c -> !busyConnectors.contains(c)).findFirst();
 
             if (connectorId_.isEmpty()) {
-                System.out.println("LOST CUSTOMER. All connectors are busy!!!");
+                //System.out.println("LOST CUSTOMER. All connectors are busy!!!");
+                events.add(new Event(startTime, EventType.NOT_AVAILABLE_CONNECTOR_EVENT, "N/A", "N/A", 0));
                 continue;
             }
             String connectorId = connectorId_.get();
             int assignedPower = assignPowerLevels(currentSessions, startTime);
             if (assignedPower == 0) {
+                events.add(new Event(startTime, EventType.NOT_AVAILABLE_POWER_EVENT, "N/A", "N/A", 0));
                 continue;
             }
 
-            ChargingSession session = new ChargingSession(sessionId, connectorId, startTime, stopTime, assignedPower);
-            //System.out.println("new session found->"+session);
-            //System.out.println("PowerEvents generated");
-            activeSessionsByConnector.put(connectorId, session);
-            //System.out.println("activeSessionsByConnector added");
+            ChargingSession session = new ChargingSession(sessionId, connectorId, startTime, stopTime, -1, assignedPower);
             sessions.add(session);
-            System.out.println("new session:" + session);
-            events.add(new ChargingEvent(startTime, EventType.START_SESSION, sessionId, connectorId, assignedPower));
-            events.add(new ChargingEvent(stopTime, EventType.STOP_SESSION, sessionId, connectorId, 0));
+            //System.out.println("new session:" + session);
+            events.add(new Event(startTime, EventType.START_SESSION_EVENT, sessionId, connectorId, assignedPower));
+            events.add(new Event(stopTime, EventType.STOP_SESSION_EVENT, sessionId, connectorId, 0));
             //activeSessionsByConnector.remove(connectorId);
         }
         sessions.stream().forEach(s -> generatePowerEvents(s));
@@ -90,21 +86,22 @@ public class EVChargingStation {
     }
 
     private int assignPowerLevels(List<ChargingSession> currentSessions, LocalDateTime startTime) {
-        int totalPower = currentSessions.stream().mapToInt(ChargingSession::getPowerLevel).sum();
+        double totalPower = currentSessions.stream().mapToDouble(ChargingSession::getPowerLevel).sum();
         if (totalPower + HIGH <= MAXIMUM_POWER) {
-            System.out.println("HIGH totalPower:" + totalPower);
+            //System.out.println("HIGH totalPower:" + totalPower);
             return HIGH;
         } else if (totalPower + MEDIUM <= MAXIMUM_POWER) {
-            System.out.println("MEDIUM totalPower:" + totalPower);
+            //System.out.println("MEDIUM totalPower:" + totalPower);
             return MEDIUM;
         } else if (totalPower + LOW <= MAXIMUM_POWER) {
-            System.out.println("LOW totalPower:" + totalPower);
+            //System.out.println("LOW totalPower:" + totalPower);
             return LOW;
         } else {// try to downgrade
             for (ChargingSession s : currentSessions) {
                 if (s.getPowerLevel() == HIGH) {
+                    events.add(new Event(startTime, EventType.DOWNGRADE_EVENT, s.getSessionId(), s.getConnectorId(), MEDIUM));
                     s.setPowerLevel(startTime, MEDIUM);
-                    System.out.println("DOWNGRADE Event generated !!!");
+                    //System.out.println("DOWNGRADE Event generated !!!");
                     return assignPowerLevels(currentSessions, startTime);
                 }
             }
@@ -117,7 +114,7 @@ public class EVChargingStation {
         LocalDateTime endTime = session.getStopTime();
 
         while (eventTime.isBefore(endTime)) {
-            events.add(new ChargingEvent(eventTime, EventType.POWER_EVENT, session.getSessionId(), session.getConnectorId(), session.getPowerLevel(eventTime)));
+            events.add(new Event(eventTime, EventType.POWER_INFO_EVENT, session.getSessionId(), session.getConnectorId(), session.getPowerLevel(eventTime)));
             eventTime = eventTime.plusMinutes(1);
         }
     }
@@ -138,15 +135,24 @@ public class EVChargingStation {
     }
 
     public void printEvents() {
-        events.stream()
-                .sorted(Comparator.comparing(ChargingEvent::getEventTime))
+        events.stream().filter(e -> !e.getEventType().equals(EventType.POWER_INFO_EVENT))
+                .sorted(Comparator.comparing(Event::getEventTime))
                 .collect(toList())
                 .forEach(System.out::println);
     }
 
+    public void saveSessions() {
+        sessions.forEach(session -> {
+            System.out.println("\n"+session);
+            session.getCharging_periods().forEach(p -> {
+                System.out.println("   "+p);
+            });
+        });
+    }
+
     public static void main(String[] args) {
         String stationId = UUID.randomUUID().toString();
-        String[] connectorIds = {"C1", "C2", "C3"};
+        String[] connectorIds = {"C1", "C2", "C3", "C4"};
         EVChargingStation station = new EVChargingStation(stationId, connectorIds);
 
         LocalDateTime today = LocalDateTime.now().with(LocalTime.MIDNIGHT);
@@ -156,7 +162,9 @@ public class EVChargingStation {
             LocalDateTime day = startDate.plusDays(i);
             station.simulateDay(day);
         }
-
+        System.out.println("*************** EVENTS *********************************");
         station.printEvents();
+        System.out.println("*************** SESSIONS *********************************");
+        station.saveSessions();
     }
 }

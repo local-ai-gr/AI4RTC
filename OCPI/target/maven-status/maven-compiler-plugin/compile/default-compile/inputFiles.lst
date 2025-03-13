@@ -22,7 +22,8 @@ C:\myFiles\VLACHODHM\AI4RTC\OCPI\src\main\java\model\Location.java
 C:\myFiles\VLACHODHM\AI4RTC\OCPI\src\main\java\model\Session.java
 C:\myFiles\VLACHODHM\AI4RTC\OCPI\src\main\java\model\StatsObj.java
 C:\myFiles\VLACHODHM\AI4RTC\OCPI\src\main\java\org\netbeans\rest\application\config\ApplicationConfig.java
-C:\myFiles\VLACHODHM\AI4RTC\OCPI\src\main\java\simulation\ChargingEvent.java
 C:\myFiles\VLACHODHM\AI4RTC\OCPI\src\main\java\simulation\ChargingSession.java
+C:\myFiles\VLACHODHM\AI4RTC\OCPI\src\main\java\simulation\DimensionType.java
 C:\myFiles\VLACHODHM\AI4RTC\OCPI\src\main\java\simulation\EVChargingStation.java
+C:\myFiles\VLACHODHM\AI4RTC\OCPI\src\main\java\simulation\Event.java
 C:\myFiles\VLACHODHM\AI4RTC\OCPI\src\main\java\simulation\EventType.java

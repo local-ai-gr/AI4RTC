@@ -5,10 +5,9 @@
 package simulation;
 
 import java.time.LocalDateTime;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
+import java.util.ArrayList;
+import java.util.List;
+import model.ChargingPeriod;
 
 class ChargingSession {
 
@@ -17,24 +16,24 @@ class ChargingSession {
     private final LocalDateTime startTime;
     private final LocalDateTime stopTime;
     private String status;
-    int powerLevel;
-    private final Map<LocalDateTime, Integer> powerLevels = new HashMap<>();
+    double powerLevel;
+    private final List<ChargingPeriod> charging_periods = new ArrayList<>();
 
-    public ChargingSession(String sessionId, String connectorId, LocalDateTime startTime, LocalDateTime stopTime, int powerLevel) {
+    public ChargingSession(String sessionId, String connectorId, LocalDateTime startTime, LocalDateTime stopTime, double energyLevel, double powerLevel) {
         this.sessionId = sessionId;
         this.connectorId = connectorId;
         this.startTime = startTime;
         this.stopTime = stopTime;
         this.status = stopTime.isAfter(LocalDateTime.now()) ? "ACTIVE" : "COMPLETED";
         this.powerLevel = powerLevel;
-        powerLevels.put(startTime, powerLevel);
+        charging_periods.add(new ChargingPeriod(startTime, energyLevel, powerLevel));
     }
 
     /**
-     * @return the powerLevels
+     * @return the charging_periods
      */
-    public Map<LocalDateTime, Integer> getPowerLevels() {
-        return powerLevels;
+    public List<ChargingPeriod> getCharging_periods() {
+        return charging_periods;
     }
 
     public String getSessionId() {
@@ -61,29 +60,25 @@ class ChargingSession {
         this.status = status;
     }
 
-    public int getPowerLevel() {
+    public double getPowerLevel() {
         return powerLevel;
     }
 
-    public int getPowerLevel(LocalDateTime atTime) {
-        Map.Entry<LocalDateTime, Integer> nearestEntry = null;
-        for (Map.Entry<LocalDateTime, Integer> entry : powerLevels.entrySet()) {
-            if (entry.getKey().isBefore(atTime) || entry.getKey().isEqual(atTime)) {
-                if (nearestEntry == null || entry.getKey().isAfter(nearestEntry.getKey())) {
-                    nearestEntry = entry;
+    public double getPowerLevel(LocalDateTime atTime) {
+        ChargingPeriod nearestChargingPeriod = null;
+        for (ChargingPeriod myChargingPeriod : charging_periods) {
+            if (myChargingPeriod.getStart_date_time().isBefore(atTime) || myChargingPeriod.getStart_date_time().isEqual(atTime)) {
+                if (nearestChargingPeriod == null || myChargingPeriod.getStart_date_time().isAfter(nearestChargingPeriod.getStart_date_time())) {
+                    nearestChargingPeriod = myChargingPeriod;
                 }
             }
         }
-        return nearestEntry != null ? nearestEntry.getValue() : getPowerLevel();
+        return nearestChargingPeriod != null ? nearestChargingPeriod.getChargingPeriodPower() : getPowerLevel();
     }
 
-    public void setPowerLevel(int powerLevel) {
+    public void setPowerLevel(LocalDateTime myStartTime, double powerLevel) {
         this.powerLevel = powerLevel;
-    }
-
-    public void setPowerLevel(LocalDateTime myStartTime, int powerLevel) {
-        this.powerLevel = powerLevel;
-        getPowerLevels().put(myStartTime, powerLevel);
+        charging_periods.add(new ChargingPeriod(startTime, 0, powerLevel));
     }
 
     @Override
