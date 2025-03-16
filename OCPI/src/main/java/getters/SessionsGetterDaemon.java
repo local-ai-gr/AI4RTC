@@ -55,7 +55,7 @@ public class SessionsGetterDaemon extends SimpleDaemon {
             //---
             data.values().stream().forEach(newObject -> {
                 try {
-                    Location myLocation = newObject.getlocationData(locations);
+                    //Location myLocation = newObject.getlocationData(locations);
                     //newObject.setLocation(myLocation);
                     //
                     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");

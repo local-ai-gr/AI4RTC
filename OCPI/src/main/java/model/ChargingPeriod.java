@@ -6,6 +6,7 @@ package model;
 // Getters and setters for the fie
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -13,7 +14,7 @@ import simulation.DimensionType;
 
 public class ChargingPeriod {
 
-    private LocalDateTime start_date_time;
+    private String start_date_time;
     private List<Dimension> dimensions = new ArrayList<>();
 
     /**
@@ -22,7 +23,8 @@ public class ChargingPeriod {
     }
 
     public ChargingPeriod(LocalDateTime start_date_time, double energy, double power) {
-        this.start_date_time = start_date_time;
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
+        this.start_date_time = start_date_time.format(formatter);
         dimensions.add(new Dimension(DimensionType.ENERGY, energy));
         dimensions.add(new Dimension(DimensionType.POWER, power));
     }
@@ -42,14 +44,16 @@ public class ChargingPeriod {
     }
 
     public LocalDateTime getStart_date_time() {
-        return start_date_time;
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
+        return LocalDateTime.parse(start_date_time, formatter);
     }
 
     /**
      * @param start_date_time the start_date_time to set
      */
     public void setStart_date_time(LocalDateTime start_date_time) {
-        this.start_date_time = start_date_time;
+       DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
+        this.start_date_time = start_date_time.format(formatter);
     }
 
     /**
