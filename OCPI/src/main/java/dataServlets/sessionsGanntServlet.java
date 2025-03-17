@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -32,6 +33,8 @@ import org.bson.conversions.Bson;
 public class sessionsGanntServlet extends HttpServlet {
 
     private static final long serialVersionUID = 1L;
+    int id = 0;
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
 
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
@@ -52,7 +55,7 @@ public class sessionsGanntServlet extends HttpServlet {
         try (PrintWriter out = response.getWriter()) {
             ServletContext myContext = request.getServletContext();
             Mongo myMongo = (Mongo) myContext.getAttribute("myMongo");
-            Collection<Location> locations = myMongo.find("locations", new Document(),false, Location.class);
+            Collection<Location> locations = myMongo.find("locations", new Document(), false, Location.class);
             //Comparator<Session> myComparator = Comparator.comparing((Session v) -> v.getEnd_date_time()).reversed();
             //------filtering ---------------    
             String location = request.getParameter("location") != null && !request.getParameter("location").isEmpty() ? request.getParameter("location") : "";
@@ -63,32 +66,28 @@ public class sessionsGanntServlet extends HttpServlet {
             String type = request.getParameter("type");
             //-----------------------------------------------------
             if (type == null || type.isEmpty() || type.equals("gannt")) {
-                List<GanntObj> ganntList = sessions.stream().
-                        filter(s -> s.getEnd_date_time() != null && s.getStart_date_time() != null).
-                        map(s -> {
-                            try {
-                                TimeStamp1.fromUnformated_elegant(s.getStart_date_time());
-                                TimeStamp1.fromUnformated_elegant(s.getEnd_date_time());
-                                Location myLocation = locations.stream().filter(l->l.getId().equals(s.getLocation_id())).findAny().orElse(null);
-                                if (myLocation != null) {
-                                    String Kwh = String.valueOf(s.getKwh());
-                                    List<String> ewses = myLocation.getEvses().stream().map(ev -> ev.getUid()).collect(toList());
-                                    int ewseIndex = ewses.indexOf(s.getEvse_uid()) + 1;
-                                    String connector = s.getConnector_id();
-                                    return new GanntObj(1, Kwh + " Kwh", s.getStart_date_time(), s.getEnd_date_time(), myLocation.getName() + ":" + ewseIndex + ":" + connector, 0.0);
-                                } else {
-                                    return null;
-                                }
-                            } catch (Exception ex) {
-                                return null;
-                            }
-                        }).
-                        filter(g -> g != null).
-                        collect(Collectors.toList());
-                long id = 1;
-                for (GanntObj ho : ganntList) {
-                    ho.setId(id++);
-                }
+                List<GanntObj> ganntList = new ArrayList<>();
+                sessions.stream().
+                        filter(s -> s.getEnd_date_time() != null && s.getStart_date_time() != null)
+                        .forEach(s -> {
+                            s.getCharging_periods().stream().
+                                    forEach(period -> {
+                                        try {
+                                            Location myLocation = locations.stream().filter(l -> l.getId().equals(s.getLocation_id())).findAny().orElse(null);
+                                            if (myLocation != null) {
+                                                String power = String.valueOf(period.getChargingPeriodPower());
+                                                List<String> ewses = myLocation.getEvses().stream().map(ev -> ev.getUid()).collect(toList());
+                                                int ewseIndex = ewses.indexOf(s.getEvse_uid()) + 1;
+                                                String connector = s.getConnector_id();
+                                                String period_start_date_time = period.getStart_date_time();
+                                                String period_end_date_time = period.getEnd_date_time();
+                                                ganntList.add(new GanntObj(id++, power + " KW", period_start_date_time, period_end_date_time, myLocation.getName() + ":" + ewseIndex + ":" + connector, 0.0));
+                                            }
+                                        } catch (Exception ex) {
+                                        }
+                                    });
+                        });
+
                 out.println(new Gson().toJson(ganntList));
                 //----------------------------------
             } else if (type.equals("erlangs")) {
@@ -185,7 +184,5 @@ public class sessionsGanntServlet extends HttpServlet {
     public String getServletInfo() {
         return "Short description";
     }// </editor-fold>
-
-
 
 }

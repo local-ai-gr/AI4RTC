@@ -71,8 +71,8 @@ public class ChargingSession {
     public double getPowerLevel(LocalDateTime atTime) {
         ChargingPeriod nearestChargingPeriod = null;
         for (ChargingPeriod myChargingPeriod : charging_periods) {
-            if (myChargingPeriod.getStart_date_time().isBefore(atTime) || myChargingPeriod.getStart_date_time().isEqual(atTime)) {
-                if (nearestChargingPeriod == null || myChargingPeriod.getStart_date_time().isAfter(nearestChargingPeriod.getStart_date_time())) {
+            if (myChargingPeriod.getStartLocalDateTime().isBefore(atTime) || myChargingPeriod.getStartLocalDateTime().isEqual(atTime)) {
+                if (nearestChargingPeriod == null || myChargingPeriod.getStartLocalDateTime().isAfter(nearestChargingPeriod.getStartLocalDateTime())) {
                     nearestChargingPeriod = myChargingPeriod;
                 }
             }
@@ -82,7 +82,13 @@ public class ChargingSession {
 
     public void setPowerLevel(LocalDateTime myStartTime, double powerLevel) {
         this.powerLevel = powerLevel;
+        if (charging_periods.size()>0){
+           ChargingPeriod lastPeriod =  charging_periods.get(charging_periods.size()-1);//get the last
+           DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
+           lastPeriod.setEnd_date_time(myStartTime.format(formatter));// end of previous period
+        }
         charging_periods.add(new ChargingPeriod(myStartTime, 0, powerLevel));
+        
     }
 
     @Override

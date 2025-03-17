@@ -29,15 +29,16 @@
 <%
     ServletContext myContext = session.getServletContext();
     Mongo myMongo = (Mongo) myContext.getAttribute("myMongo");
+    if (request.getParameter("deleteAll") != null) {
+        myMongo.delete("sessions", new Document());
+    }
     Collection<Session> sessions = myMongo.find("sessions", new Document(), false, Session.class);
     final JspWriter out1 = out;
     if (request.getParameter("loadFromFile") != null) {
         String filename = System.getenv("APPLICATIONS_PATH") + "/OCPI/conf/sessions.csv";
         loadFromFile(filename, StandardCharsets.ISO_8859_1, myMongo);
     }
-    if (request.getParameter("deleteAll") != null) {
-        myMongo.delete("sessions", new Document());
-    }
+
 %>
 <html>
     <head>
@@ -48,8 +49,7 @@
         <h1>Sessions (from DB)</h1>
         <a href="sessions.jsp?loadFromFile">load From File</a>
         <a href="sessions.jsp?deleteAll">Delete All</a>
-        <%            
-            sessions.stream().sorted(Comparator.comparing((Session s)->s.getStart_date_time()).reversed()).forEach(v -> {
+        <%            sessions.stream().sorted(Comparator.comparing((Session s) -> s.getStart_date_time()).reversed()).forEach(v -> {
                 try {
                     out1.println("<p>" + new Gson().toJson(v));
                 } catch (Exception e) {
@@ -60,14 +60,14 @@
     </body>
 </html>
 
-<%!    
+<%!
     void loadFromFile(String filename, Charset charSet, Mongo myMongo) throws IOException {
         Collection<Location> locations = myMongo.find("locations", new Document(), false, Location.class);
         List<String> sessions = Helpme.getFileRowsAsList(filename, charSet);
         LocalDateTime localDateTime = new TimeStamp1().toLocalDateTime();
         sessions.stream().filter(s -> !s.startsWith("#")).map(s -> s.split(";")).map(sesionData -> {
             Session s = new Session();
-            
+
             s.setLocation_id(sesionData[0]);
             Location myLocation = s.getlocationData(locations);
             //s.setLocation(myLocation);
@@ -75,7 +75,7 @@
             s.setEnd_date_time(sesionData[5]);
             s.setKwh(Double.parseDouble(sesionData[3].replace(",", ".")));
             String plug = sesionData[2];
-            
+
             if (plug.equals("A")) {
                 s.setEvse_uid("A");
                 s.setConnector_id("conn1");

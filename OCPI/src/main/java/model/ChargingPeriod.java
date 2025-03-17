@@ -15,6 +15,7 @@ import simulation.DimensionType;
 public class ChargingPeriod {
 
     private String start_date_time;
+    private String end_date_time;
     private List<Dimension> dimensions = new ArrayList<>();
 
     /**
@@ -40,10 +41,16 @@ public class ChargingPeriod {
 
     @Override
     public String toString() {
-        return "ChargingPeriod{" + "start_date_time=" + start_date_time + ", dimensions=" + dimensions+ '}';
+        return "ChargingPeriod{" + "start_date_time=" + start_date_time + ", end_date_time=" + end_date_time + ", dimensions=" + dimensions + '}';
     }
 
-    public LocalDateTime getStart_date_time() {
+
+
+    public String getStart_date_time() {
+        return start_date_time;
+    }
+
+    public LocalDateTime getStartLocalDateTime() {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
         return LocalDateTime.parse(start_date_time, formatter);
     }
@@ -52,8 +59,27 @@ public class ChargingPeriod {
      * @param start_date_time the start_date_time to set
      */
     public void setStart_date_time(LocalDateTime start_date_time) {
-       DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
         this.start_date_time = start_date_time.format(formatter);
+    }
+
+    /**
+     * @return the end_date_time
+     */
+    public String getEnd_date_time() {
+        return end_date_time;
+    }
+
+    public LocalDateTime getEndLocalDateTime() {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
+        return LocalDateTime.parse(end_date_time, formatter);
+    }
+
+    /**
+     * @param end_date_time the end_date_time to set
+     */
+    public void setEnd_date_time(String end_date_time) {
+        this.end_date_time = end_date_time;
     }
 
     /**
