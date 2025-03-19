@@ -11,30 +11,33 @@ import java.time.LocalDateTime;
  * @author nsofias
  */
 public class Event {
-    private final LocalDateTime eventTime;
+
+    private final String eventTime;
     private final EventType eventType;
+    private final String location_id;
     private final String sessionId;
     private final String connectorId;
     private final double powerValue;
 
-    public Event(LocalDateTime eventTime, EventType eventType, String sessionId, String connectorId) {
-        this(eventTime, eventType, sessionId, connectorId, -1);
-    }
-
-    public Event(LocalDateTime eventTime, EventType eventType, String sessionId, String connectorId, double powerValue) {
+    public Event(String eventTime, EventType eventType, String locationId, String sessionId, String connectorId, double powerValue) {
         this.eventTime = eventTime;
         this.eventType = eventType;
+        this.location_id = locationId;
         this.sessionId = sessionId;
         this.connectorId = connectorId;
         this.powerValue = powerValue;
     }
 
-    public LocalDateTime getEventTime() {
+    public String getEventTime() {
         return eventTime;
     }
 
     public EventType getEventType() {
         return eventType;
+    }
+
+    public String getLocation_id() {
+        return location_id;
     }
 
     public String getSessionId() {
@@ -44,7 +47,7 @@ public class Event {
     public String getConnectorId() {
         return connectorId;
     }
-    
+
     public double getPowerValue() {
         return powerValue;
     }

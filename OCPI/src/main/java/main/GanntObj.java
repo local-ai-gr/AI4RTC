@@ -2,6 +2,7 @@ package main;
 
 public class GanntObj {
 
+
     //{ id: 1, content: 'Item 1', start: '2023-09-01', group: 1 },
     private long id;
     private final String content;
@@ -9,14 +10,16 @@ public class GanntObj {
     private final String end;
     private final String group;
     private final double value;
+    private final String style;
 
-    public GanntObj(long id, String content, String start, String end, String group, double value) {
+    public GanntObj(long id, String content, String start, String end, String group, String style,double value) {
         this.id = id;
         this.content = content;
         this.start = start;
         this.end = end;
         this.group = group;
         this.value = value;
+        this.style = style;
     }
 
     /**
@@ -67,4 +70,11 @@ public class GanntObj {
     public double getValue() {
         return value;
     }
+
+    /**
+     * @return the style
+     */
+    public String getStyle() {
+        return style;
+    }    
 }

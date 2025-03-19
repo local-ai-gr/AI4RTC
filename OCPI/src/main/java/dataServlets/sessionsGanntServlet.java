@@ -9,14 +9,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.time.format.DateTimeFormatter;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 import static java.util.stream.Collectors.toList;
 import main.GanntObj;
 import model.Location;
@@ -25,6 +24,9 @@ import nsofiasLib.databases.Mongo;
 import nsofiasLib.time.TimeStamp1;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import static simulation.EVChargingStation.FORMATER;
+import simulation.Event;
+import simulation.EventType;
 
 /**
  *
@@ -34,7 +36,6 @@ public class sessionsGanntServlet extends HttpServlet {
 
     private static final long serialVersionUID = 1L;
     int id = 0;
-    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
 
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
@@ -62,6 +63,7 @@ public class sessionsGanntServlet extends HttpServlet {
             Bson myFilter = (location != null && !location.isEmpty()) ? Filters.eq("location_id", location) : new Document();
             //-----------------------------------------
             Collection<Session> sessions = myMongo.find("sessions", myFilter, false, Session.class);
+            Collection<Event> events = myMongo.find("events", myFilter, false, Event.class);
             //
             String type = request.getParameter("type");
             //-----------------------------------------------------
@@ -76,16 +78,30 @@ public class sessionsGanntServlet extends HttpServlet {
                                             Location myLocation = locations.stream().filter(l -> l.getId().equals(s.getLocation_id())).findAny().orElse(null);
                                             if (myLocation != null) {
                                                 String power = String.valueOf(period.getChargingPeriodPower());
-                                                List<String> ewses = myLocation.getEvses().stream().map(ev -> ev.getUid()).collect(toList());
-                                                int ewseIndex = ewses.indexOf(s.getEvse_uid()) + 1;
+                                                //List<String> ewses = myLocation.getEvses().stream().map(ev -> ev.getUid()).collect(toList());
+                                                //int ewseIndex = ewses.indexOf(s.getEvse_uid()) + 1;
                                                 String connector = s.getConnector_id();
                                                 String period_start_date_time = period.getStart_date_time();
                                                 String period_end_date_time = period.getEnd_date_time();
-                                                ganntList.add(new GanntObj(id++, power + " KW", period_start_date_time, period_end_date_time, myLocation.getName() + ":" + ewseIndex + ":" + connector, 0.0));
+                                                String groupName= request.getParameter("location")==null?myLocation.getName() + " " + connector:connector;
+                                                ganntList.add(new GanntObj(id++, power, period_start_date_time, period_end_date_time, groupName, null, 0.0));
                                             }
                                         } catch (Exception ex) {
                                         }
                                     });
+                        });
+
+                events.stream().
+                        filter(e -> e.getEventType() == EventType.DOWNGRADE_EVENT)
+                        .forEach(e -> {
+                            Location myLocation = locations.stream().filter(l -> l.getId().equals(e.getLocation_id())).findAny().orElse(null);
+                            LocalDateTime ldt = LocalDateTime.parse(e.getEventTime(),FORMATER);
+                            LocalDateTime ldt1 = ldt.plusSeconds(1);
+                            String eventEnd = ldt1.format(FORMATER);
+                            String connector = e.getConnectorId();
+                            String groupName= request.getParameter("location")==null?myLocation.getName() + " " + connector:connector;
+                            ganntList.add(new GanntObj(id++, "", e.getEventTime(), eventEnd, "Downgrades", "background-color: red; border-color: red;", 0.0));
+                            ganntList.add(new GanntObj(id++, "", e.getEventTime(), eventEnd, groupName, "background-color: red; border-color: red;", 0.0));
                         });
 
                 out.println(new Gson().toJson(ganntList));
@@ -105,7 +121,7 @@ public class sessionsGanntServlet extends HttpServlet {
                             endTime.addHours(1);
                             String _endTime = endTime.getNowUnformated_elegant();
                             //System.out.println(_endTime);
-                            ganntList.add(new GanntObj(1, "", k, _endTime, myLocation.getName(), v));
+                            ganntList.add(new GanntObj(1, "", k, _endTime, myLocation.getName(), null, v));
                         } catch (Exception ex) {
                             Logger.getLogger(sessionsGanntServlet.class.getName()).log(Level.SEVERE, null, ex);
                         }
@@ -131,7 +147,7 @@ public class sessionsGanntServlet extends HttpServlet {
                             endTime.addHours(1);
                             String _endTime = endTime.getNowUnformated_elegant();
                             //System.out.println(_endTime);                        
-                            ganntList.add(new GanntObj(1, "", k, _endTime, myLocation.getName(), v));
+                            ganntList.add(new GanntObj(1, "", k, _endTime, myLocation.getName(), null, v));
                         } catch (Exception ex) {
                             Logger.getLogger(sessionsGanntServlet.class.getName()).log(Level.SEVERE, null, ex);
                         }

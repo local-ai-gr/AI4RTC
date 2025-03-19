@@ -58,8 +58,8 @@ public class MyServletListener implements ServletContextListener {
         myContext.setAttribute("myMongo", myMongo);
         myContext.setAttribute("events", events);
         //
-        registerDaemon(new LocationsGetterDaemon(myMongo, 60000, 5), "LocationsGetterDaemon");//every 5 minutes
-        registerDaemon(new SessionsGetterDaemon(myMongo, 60000, 5), "SessionsGetterDaemon");//every 5 minutes
+        //registerDaemon(new LocationsGetterDaemon(myMongo, 60000, 5), "LocationsGetterDaemon");//every 5 minutes
+        //registerDaemon(new SessionsGetterDaemon(myMongo, 60000, 5), "SessionsGetterDaemon");//every 5 minutes
         //registerDaemon(new CdrsGetterDaemon(myMongo, 60000, 5), "CdrsGetterDaemon");//every 5 minutes
     }
 

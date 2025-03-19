@@ -82,7 +82,7 @@ public class ChargingSession {
 
     public void setPowerLevel(LocalDateTime myStartTime, double powerLevel) {
         this.powerLevel = powerLevel;
-        if (charging_periods.size()>0){
+        if (!charging_periods.isEmpty()){
            ChargingPeriod lastPeriod =  charging_periods.get(charging_periods.size()-1);//get the last
            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
            lastPeriod.setEnd_date_time(myStartTime.format(formatter));// end of previous period
