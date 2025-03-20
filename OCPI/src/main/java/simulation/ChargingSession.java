@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import static java.time.temporal.ChronoUnit.SECONDS;
 import model.ChargingPeriod;
 import model.Session;
 
@@ -80,12 +81,19 @@ public class ChargingSession {
         return nearestChargingPeriod != null ? nearestChargingPeriod.getChargingPeriodPower() : getPowerLevel();
     }
 
-    public void setPowerLevel(LocalDateTime myStartTime, double powerLevel) {
+    public void changePowerLevel(LocalDateTime myStartTime, double powerLevel) {
         this.powerLevel = powerLevel;
         if (!charging_periods.isEmpty()){
-           ChargingPeriod lastPeriod =  charging_periods.get(charging_periods.size()-1);//get the last
+           ChargingPeriod previousPeriod =  charging_periods.get(charging_periods.size()-1);//get the last
            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
-           lastPeriod.setEnd_date_time(myStartTime.format(formatter));// end of previous period
+           // --- set previousPeriod.setEnd_date_time  and energy ---
+           previousPeriod.setEnd_date_time(myStartTime.format(formatter));// end of previous period
+           LocalDateTime  T_1 = previousPeriod.getStartLocalDateTime();
+           LocalDateTime  T_2 = previousPeriod.getEndLocalDateTime();
+           long previousDuration = T_1.until(T_2, SECONDS);
+           double previousPowerlevel = previousPeriod.getChargingPeriodPower();
+           double energy = (previousPowerlevel* previousDuration)/3600;
+           previousPeriod.setChargingPeriodEnergy(energy);
         }
         charging_periods.add(new ChargingPeriod(myStartTime, 0, powerLevel));
         

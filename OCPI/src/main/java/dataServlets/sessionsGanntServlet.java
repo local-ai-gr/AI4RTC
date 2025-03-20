@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import static java.util.stream.Collectors.toList;
 import main.GanntObj;
 import model.Location;
 import model.Session;
@@ -83,7 +82,7 @@ public class sessionsGanntServlet extends HttpServlet {
                                                 String connector = s.getConnector_id();
                                                 String period_start_date_time = period.getStart_date_time();
                                                 String period_end_date_time = period.getEnd_date_time();
-                                                String groupName= request.getParameter("location")==null?myLocation.getName() + " " + connector:connector;
+                                                String groupName = request.getParameter("location") == null ? myLocation.getName() + " " + connector : connector;
                                                 ganntList.add(new GanntObj(id++, power, period_start_date_time, period_end_date_time, groupName, null, 0.0));
                                             }
                                         } catch (Exception ex) {
@@ -95,11 +94,11 @@ public class sessionsGanntServlet extends HttpServlet {
                         filter(e -> e.getEventType() == EventType.DOWNGRADE_EVENT)
                         .forEach(e -> {
                             Location myLocation = locations.stream().filter(l -> l.getId().equals(e.getLocation_id())).findAny().orElse(null);
-                            LocalDateTime ldt = LocalDateTime.parse(e.getEventTime(),FORMATER);
+                            LocalDateTime ldt = LocalDateTime.parse(e.getEventTime(), FORMATER);
                             LocalDateTime ldt1 = ldt.plusSeconds(1);
                             String eventEnd = ldt1.format(FORMATER);
                             String connector = e.getConnectorId();
-                            String groupName= request.getParameter("location")==null?myLocation.getName() + " " + connector:connector;
+                            String groupName = request.getParameter("location") == null ? myLocation.getName() + " " + connector : connector;
                             ganntList.add(new GanntObj(id++, "", e.getEventTime(), eventEnd, "Downgrades", "background-color: red; border-color: red;", 0.0));
                             ganntList.add(new GanntObj(id++, "", e.getEventTime(), eventEnd, groupName, "background-color: red; border-color: red;", 0.0));
                         });
@@ -112,8 +111,8 @@ public class sessionsGanntServlet extends HttpServlet {
                 Bson myLocationFilter = (location != null && !location.isEmpty()) ? Filters.eq("id", location) : new Document();
                 List<Location> myLocations = myMongo.find("locations", myLocationFilter, false, Location.class);
                 myLocations.forEach(myLocation -> {
-                    double erlangs = myLocation.getErlangs(myMongo, new TimeStamp1(t1), new TimeStamp1(t2));
-                    System.out.println("erlangs=" + erlangs);
+                    //double erlangs = myLocation.getErlangs(myMongo, new TimeStamp1(t1), new TimeStamp1(t2));
+                    System.out.println("erlangs for " + myLocation.getName());
                     Map<String, Double> erlangsPerHour = myLocation.getErlangsPerHour(myMongo, new TimeStamp1(t1), new TimeStamp1(t2));
                     erlangsPerHour.forEach((k, v) -> {
                         try {
@@ -159,6 +158,7 @@ public class sessionsGanntServlet extends HttpServlet {
                 }
                 out.println(new Gson().toJson(ganntList));
             }
+
         }
     }
 

@@ -7,7 +7,6 @@ model\Session.class
 main\KWResource.class
 model\Location.class
 model\CDR$CdrData1.class
-model\ChargingPeriod$Dimension.class
 model\EVSE.class
 main\Update.class
 getters\SessionsGetterDaemon.class
@@ -33,5 +32,6 @@ main\MyServletListener.class
 model\StatsObj.class
 model\ChargingPeriod.class
 getters\CdrsGetterDaemon.class
+model\Dimension.class
 getters\LocationsWrapper.class
 getters\CdrsGetter.class

@@ -40,6 +40,7 @@ public class Getter {
     }
 
     public static void main(String[] args) {
+        if (false)  
         try {
             String from = "2024-09-13T14:56:42.798Z";// URLEncoder.encode("2000-06-29T20:39:09", "utf8");
             //String to = "2024-12-17T20:20:04.198z";//URLEncoder.encode("2024-06-29T20:39:09", "utf8");
@@ -49,6 +50,7 @@ public class Getter {
             e.printStackTrace(System.out);
         }
         System.out.println("\n\n--- Locations ---");
+        if (false)  
         try {
             Map<String, Location> myLocations = new LocationsGetter().get();
             myLocations.values().forEach(l -> {
@@ -62,6 +64,7 @@ public class Getter {
             e.printStackTrace(System.out);
         }
         //---------------------------
+        if (false)  {
         System.out.println("\n\n--- Sessions ---");
         Map<String, Session> allSessions = new HashMap<>();
         int found = 0;
@@ -79,7 +82,7 @@ public class Getter {
         } while (found > 0);
         allSessions.values().stream().sorted(Comparator.comparing(s->s.getStart_date_time())).forEach(l -> {
             System.out.println(l.getId() + " started:" + l.getStart_date_time() + " endded:" + l.getEnd_date_time() + " Loc:" + l.getLocation_id() + " last updated:" + l.getLast_updated());
-        });
+        });}
         //---------------------------------
         System.out.println("\n\n--- Cdrs ---");
         if (false)  
@@ -92,15 +95,15 @@ public class Getter {
             e.printStackTrace(System.out);
         }
         //----------
-        if (false)            
+        if (true)            
         try {
             String t1 = "20240519T000000";
             String t2 = "20241030T000000";
             System.out.println("\n\n--- erlaqngs ---");
             Mongo myMongo = new Mongo("mongodb://localhost:27017", "OCPI");
             Location myLocation = new LocationsGetter().get("GR-EMU-S6792111181543869683893493-L");
-            double erlangs = myLocation.getErlangs(myMongo, new TimeStamp1(t1), new TimeStamp1(t2));
-            System.out.println("erlangs=" + erlangs);
+           // double erlangs = myLocation.getErlangs(myMongo, new TimeStamp1(t1), new TimeStamp1(t2));
+            //System.out.println("erlangs=" + erlangs);
             Map<String, Double> erlangsPerHour = myLocation.getErlangsPerHour(myMongo, new TimeStamp1(t1), new TimeStamp1(t2));
             erlangsPerHour.forEach((k, v) -> System.out.println("erlangs=" + k + " " + v));
             //

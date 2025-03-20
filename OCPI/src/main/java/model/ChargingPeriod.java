@@ -35,7 +35,25 @@ public class ChargingPeriod {
         if (dim.isPresent()) {
             return dim.get().getVolume();
         } else {
-            return -1;
+            return 0;
+        }
+    }
+
+    public double getChargingPeriodEnergy() {
+        Optional<Dimension> dim = dimensions.stream().filter(d -> d.getType() == DimensionType.ENERGY).findAny();
+        if (dim.isPresent()) {
+            return dim.get().getVolume();
+        } else {
+            return 0;
+        }
+    }
+
+    public void setChargingPeriodEnergy(double energy) {
+        for (Dimension d : dimensions) {
+            if (d.getType() == DimensionType.ENERGY) {
+                d.setVolume(energy);
+                break;
+            }
         }
     }
 
@@ -43,8 +61,6 @@ public class ChargingPeriod {
     public String toString() {
         return "ChargingPeriod{" + "start_date_time=" + start_date_time + ", end_date_time=" + end_date_time + ", dimensions=" + dimensions + '}';
     }
-
-
 
     public String getStart_date_time() {
         return start_date_time;
@@ -97,53 +113,4 @@ public class ChargingPeriod {
     }
 
     //************************************
-    public class Dimension {
-
-        private DimensionType type;
-        private double volume;
-
-        public Dimension() {
-        }
-
-        public Dimension(DimensionType type, double volume) {
-            this.type = type;
-            this.volume = volume;
-
-        }
-
-        @Override
-        public String toString() {
-            return "Dimension{" + "type=" + type + ", volume=" + volume + '}';
-        }
-
-        /**
-         * @return the type
-         */
-        public DimensionType getType() {
-            return type;
-        }
-
-        /**
-         * @param type the type to set
-         */
-        public void setType(DimensionType type) {
-            this.type = type;
-        }
-
-        /**
-         * @return the volume
-         */
-        public double getVolume() {
-            return volume;
-        }
-
-        /**
-         * @param volume the volume to set
-         */
-        public void setVolume(double volume) {
-            this.volume = volume;
-        }
-
-    }
-
 }

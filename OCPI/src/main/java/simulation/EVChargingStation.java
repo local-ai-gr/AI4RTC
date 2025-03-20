@@ -4,6 +4,7 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import static java.time.temporal.ChronoUnit.SECONDS;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -52,10 +53,18 @@ public class EVChargingStation {
         // correct the null end session of the last Charging_period        
         getSessions().forEach(session -> {
             List<ChargingPeriod> charging_periods = session.getCharging_periods();
-            if (!charging_periods.isEmpty()) {
-                ChargingPeriod lastPeriod = charging_periods.get(charging_periods.size() - 1);//get the last           
-                lastPeriod.setEnd_date_time(session.getStopTime().format(FORMATER));// end of session time  
-            }
+        if (!charging_periods.isEmpty()){
+           ChargingPeriod previousPeriod =  charging_periods.get(charging_periods.size()-1);//get the last
+           DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
+           // --- set previousPeriod.setEnd_date_time  and energy ---
+           previousPeriod.setEnd_date_time(session.getStopTime().format(formatter));// end of previous period
+           LocalDateTime  T_1 = previousPeriod.getStartLocalDateTime();
+           LocalDateTime  T_2 = previousPeriod.getEndLocalDateTime();
+           long previousDuration = T_1.until(T_2, SECONDS);
+           double previousPowerlevel = previousPeriod.getChargingPeriodPower();
+           double energy = (previousPowerlevel* previousDuration)/3600;
+           previousPeriod.setChargingPeriodEnergy(energy);
+        }            
         });
     }
 
@@ -96,7 +105,7 @@ public class EVChargingStation {
             }
             String sessionId = new UUID(secureRandom.nextLong(), secureRandom.nextLong()).toString();
 
-            ChargingSession session = new ChargingSession(getLocationId(), sessionId, connectorId, startTime, stopTime, -1, assignedPower);
+            ChargingSession session = new ChargingSession(getLocationId(), sessionId, connectorId, startTime, stopTime, 0, assignedPower);
             getSessions().add(session);
             //System.out.println("new session:" + session);
             getEvents().add(new Event(startTime.format(FORMATER), EventType.START_SESSION_EVENT, locationId, sessionId, connectorId, assignedPower));
@@ -122,7 +131,7 @@ public class EVChargingStation {
             for (ChargingSession s : currentSessions) {
                 if (s.getPowerLevel() == HIGH) {
                     getEvents().add(new Event(startTime.format(FORMATER), EventType.DOWNGRADE_EVENT, locationId, s.getSessionId(), s.getConnectorId(), MEDIUM));
-                    s.setPowerLevel(startTime, MEDIUM);
+                    s.changePowerLevel(startTime, MEDIUM);
                     //System.out.println("DOWNGRADE Event generated !!!");
                     return assignPowerLevels(currentSessions, startTime);
                 }
