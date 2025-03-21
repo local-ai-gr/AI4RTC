@@ -4,6 +4,7 @@
     Author     : gsofi
 --%>
 
+<%@page import="nsofiasLib.time.TimeStamp1"%>
 <%@page import="org.bson.Document"%>
 <%@page import="java.util.List"%>
 <%@page import="java.util.stream.Collectors"%>
@@ -23,12 +24,40 @@
     List<String> activelocationIds = sessions.stream().map(s -> s.getLocation_id()).collect(Collectors.toList());
     //---
     Collection<Location> locations = myMongo.find("locations", new Document(), false, Location.class);
+    //------- location & timestamps--------
     String location = request.getParameter("location") != null && !request.getParameter("location").isEmpty() ? request.getParameter("location") : "";
+    String timeFrom = request.getParameter("timeFrom");
+    if (timeFrom == null) {
+        TimeStamp1 timeFromT = new TimeStamp1();
+        timeFromT.addDays(-7);
+        timeFrom = timeFromT.getNowUnformated_elegant().substring(0, 16).replaceAll("-", "/").replaceAll("T", " ");
+    }
+    String timeTo = request.getParameter("timeTo");
+    if (timeTo == null) {
+        TimeStamp1 timeToT = new TimeStamp1();
+        timeTo = timeToT.getNowUnformated_elegant().substring(0, 16).replaceAll("-", "/").replaceAll("T", " ");
+    }
+    //--------------------------------
 %>
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <script src="js/jquery-ui/external/jquery/jquery.js" type="text/javascript"></script> 
+        <script src="js/jquery-ui/jquery-ui.js" type="text/javascript"></script>     
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-datetimepicker/2.5.20/jquery.datetimepicker.min.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-datetimepicker/2.5.20/jquery.datetimepicker.full.min.js"></script>        
         <title>JSP Page</title>
+        <script>
+            $(function () {
+                // Initialize both datetime pickers in one place
+                $("#DatepickerTo").datetimepicker({
+                    format: "Y-m-d h:m:s"  // Use 'Y' for a four-digit year
+                });
+                $("#DatepickerFrom").datetimepicker({
+                    format: "Y-m-d h:m:s"
+                });
+            });
+        </script>       
         <style>
             body {
                 background-color:  whitesmoke;
@@ -48,12 +77,6 @@
                 width: 100%;
                 height: 100%;
             }
-
-
-
-
-
-
             #customSelect {
                 width: 200px;
                 padding: 10px;
@@ -112,14 +135,16 @@
                     });
                 %>
             </select>
+            &nbsp;Time from: <input type="text" onchange="this.form.submit()" name="timeFrom" id="DatepickerFrom" value="<%=timeFrom%>">
+            &nbsp;Time until: <input type="text" onchange="this.form.submit()" name="timeTo" id="DatepickerTo" value="<%=timeTo%>">
         </form>  
 
         <div class="iframe-grid">
             <iframe src="map.jsp?location=<%=location%>"></iframe>
                 <%if (location != null && !location.isEmpty()) {%> 
-            <iframe src="gantt_chart_for_sessions.jsp?location=<%=location%>" ></iframe> 
-            <iframe src="time_charts_for_sessions_1.jsp?type=erlangs&tittle=Utilization&location=<%=location%>"></iframe>     
-            <iframe src="time_charts_for_sessions_1.jsp?type=kwh&location=<%=location%>"></iframe>
+            <iframe src="gantt_chart_for_sessions.jsp?location=<%=location%>&timeFrom=<%=timeFrom%>&timeTo=<%=timeTo%>" ></iframe> 
+            <iframe src="time_charts_for_sessions_1.jsp?type=erlangs&tittle=Utilization&location=<%=location%>&timeFrom=<%=timeFrom%>&timeTo=<%=timeTo%>"></iframe>     
+            <iframe src="time_charts_for_sessions_1.jsp?type=kwh&location=<%=location%>&timeFrom=<%=timeFrom%>&timeTo=<%=timeTo%>"></iframe>
                 <%}%>
         </div>
     </body>

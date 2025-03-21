@@ -1,10 +1,25 @@
+<%@page import="nsofiasLib.time.TimeStamp1"%>
 <%@page import="java.net.URLEncoder"%>
 <%
-    String location = request.getParameter("location");
-    String params = location != null ? "?type=gannt&location=" + location : "?type=gannt";
+    //------- location & timestamps--------
+    String location = request.getParameter("location") != null && !request.getParameter("location").isEmpty() ? request.getParameter("location") : "";
+    String timeFrom = request.getParameter("timeFrom");
+    if (timeFrom == null) {
+        TimeStamp1 timeFromT = new TimeStamp1();
+        timeFromT.addDays(-7);
+        timeFrom = timeFromT.getNowUnformated_elegant().substring(0, 16).replaceAll("-", "/").replaceAll("T", " ");
+    }
+    String timeTo = request.getParameter("timeTo");
+    if (timeTo == null) {
+        TimeStamp1 timeToT = new TimeStamp1();
+        timeTo = timeToT.getNowUnformated_elegant().substring(0, 16).replaceAll("-", "/").replaceAll("T", " ");
+    }
+    //--------------------------------
+    String params = location != null ? "?type=gannt&location="+location : "?type=gannt";
+    params = params+"&timeFrom="+timeFrom+"&timeTo="+timeTo;
     String sourceUrl = "sessionsGanntServlet" + params;
     if (location != null) {
-        out.println("<h1>timeline for Location" + location + "</h1>");
+       // out.println("<h1>timeline for Location" + location + "</h1>");
     }
     //out.println(sourceUrl);
 %>

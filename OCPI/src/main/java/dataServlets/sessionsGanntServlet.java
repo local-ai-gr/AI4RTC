@@ -50,19 +50,36 @@ public class sessionsGanntServlet extends HttpServlet {
         request.setCharacterEncoding("utf-8");
         response.setCharacterEncoding("utf-8");
         response.setContentType("application/json");
-        String t1 = "20240519T000000";
-        String t2 = new TimeStamp1().getNowUnformated().substring(0, 15);
+
+        //------- location & timestamps--------
+        String location = request.getParameter("location") != null && !request.getParameter("location").isEmpty() ? request.getParameter("location") : "";
+        String timeFrom = request.getParameter("timeFrom");
+        if (timeFrom == null) {
+            TimeStamp1 timeFromT = new TimeStamp1();
+            timeFromT.addDays(-7);
+            timeFrom = timeFromT.getNowUnformated_elegant().substring(0, 16).replaceAll("-", "/").replaceAll("T", " ");
+        }
+        String timeTo = request.getParameter("timeTo");
+        if (timeTo == null) {
+            TimeStamp1 timeToT = new TimeStamp1();
+            timeTo = timeToT.getNowUnformated_elegant().substring(0, 16).replaceAll("-", "/").replaceAll("T", " ");
+        }
+        String t1 = timeFrom.substring(0, 16).replaceAll("-", "/").replaceAll("T", " ");
+        String t2 = timeTo.substring(0, 16).replaceAll("-", "/").replaceAll("T", " ");
+        //--------------------------------         
         try (PrintWriter out = response.getWriter()) {
             ServletContext myContext = request.getServletContext();
             Mongo myMongo = (Mongo) myContext.getAttribute("myMongo");
             Collection<Location> locations = myMongo.find("locations", new Document(), false, Location.class);
             //Comparator<Session> myComparator = Comparator.comparing((Session v) -> v.getEnd_date_time()).reversed();
             //------filtering ---------------    
-            String location = request.getParameter("location") != null && !request.getParameter("location").isEmpty() ? request.getParameter("location") : "";
-            Bson myFilter = (location != null && !location.isEmpty()) ? Filters.eq("location_id", location) : new Document();
+            Bson locationFilter = (location != null && !location.isEmpty()) ? Filters.eq("location_id", location) : new Document();
+            Bson timeFilter =  Filters.and(Filters.gte("end_date_time", timeFrom),
+                    Filters.lte("start_date_time", timeTo));
+            Bson filter = Filters.and(locationFilter,timeFilter);
             //-----------------------------------------
-            Collection<Session> sessions = myMongo.find("sessions", myFilter, false, Session.class);
-            Collection<Event> events = myMongo.find("events", myFilter, false, Event.class);
+            Collection<Session> sessions = myMongo.find("sessions", filter, false, Session.class);
+            Collection<Event> events = myMongo.find("events", locationFilter, false, Event.class);
             //
             String type = request.getParameter("type");
             //-----------------------------------------------------

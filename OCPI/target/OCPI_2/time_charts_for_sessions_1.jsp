@@ -3,9 +3,23 @@
     Created on : Apr 27, 2023, 10:46:21 PM
     Author     : nsofias
 --%>
+<%@page import="nsofiasLib.time.TimeStamp1"%>
 <%@page import="nsofiasLib.utils.TimeSeriesParamCounters"%>
 <%
-    String location = request.getParameter("location") != null ? request.getParameter("location") : "";
+    //------- location & timestamps--------
+    String location = request.getParameter("location") != null && !request.getParameter("location").isEmpty() ? request.getParameter("location") : "";
+    String timeFrom = request.getParameter("timeFrom");
+    if (timeFrom == null) {
+        TimeStamp1 timeFromT = new TimeStamp1();
+        timeFromT.addDays(-7);
+        timeFrom = timeFromT.getNowUnformated_elegant().substring(0, 16).replaceAll("-", "/").replaceAll("T", " ");
+    }
+    String timeTo = request.getParameter("timeTo");
+    if (timeTo == null) {
+        TimeStamp1 timeToT = new TimeStamp1();
+        timeTo = timeToT.getNowUnformated_elegant().substring(0, 16).replaceAll("-", "/").replaceAll("T", " ");
+    }
+    //--------------------------------
     String type = request.getParameter("type") != null ? request.getParameter("type") : "";
     String title = "", yTitle = "";
     if (type.equals("erlangs")) {
@@ -15,7 +29,9 @@
         title = "Energy consumption";
         yTitle = "kWh";
     }
-    String params = "?type=" + type + "&location=" + location;
+    
+    String params = location != null ?  "?type=" + type + "&location=" + location : "?type=" + type;
+    params = params+"&timeFrom="+timeFrom+"&timeTo="+timeTo;    
     String sourceUrl = request.getRequestURL().toString().replace("time_charts_for_sessions_1.jsp", "") + "sessionsGanntServlet" + params;
     out.println("<p>");
 %>
