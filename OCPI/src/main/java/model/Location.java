@@ -124,7 +124,7 @@ public class Location {
                 || (s.getStart_date_time().compareTo(period_stop) < 0 && s.getEnd_date_time().compareTo(period_stop) > 0)
                 || (s.getStart_date_time().compareTo(period_start) > 0 && s.getEnd_date_time().compareTo(period_stop) < 0))
                 .forEach(s -> {
-                    System.out.println("getErlangsPerHour:res:sesion found=" + s.getId());
+                    //System.out.println("getErlangsPerHour:res:sesion found=" + s.getId());
                     TimeStamp1 session_start_T;
                     try {
                         session_start_T = TimeStamp1.fromUnformated_elegant(s.getStart_date_time());
@@ -132,7 +132,7 @@ public class Location {
                         TimeStamp1 uStart = periodStartT.isAfter(session_start_T) ? periodStartT : session_start_T;
                         TimeStamp1 uStop = periodStopT.isBefore(session_stop_T) ? periodStopT : session_stop_T;
                         myCounters.updateCounters("-", uStop.hoursDiff(uStart));
-                        System.out.println("getErlangsPerHour:res:updateCounters=" + uStop.hoursDiff(uStart));
+                        //System.out.println("getErlangsPerHour:res:updateCounters=" + uStop.hoursDiff(uStart));
                     } catch (Exception ex) {
                         Logger.getLogger(Location.class.getName()).log(Level.SEVERE, null, ex);
                         System.out.println("getErlangsPerHour:res:updateCounters error:" + ex);
@@ -152,7 +152,7 @@ public class Location {
                         Filters.or(Filters.and(Filters.lte("start_date_time", period_start), Filters.gte("end_date_time", period_start)), // ss{ss }
                                 Filters.and(Filters.lte("start_date_time", period_stop), Filters.gte("end_date_time", period_stop)),//         { ss}ss
                                 Filters.and(Filters.gte("start_date_time", period_start), Filters.lte("end_date_time", period_stop)) //        { ss }
-                        )), false,
+                        )), true,
                 Session.class);
         sessions.forEach(s -> {
             TimeStamp1 session_start_T;
@@ -172,13 +172,13 @@ public class Location {
     public Map<String, Double> getErlangsPerHour(Mongo myMongo, TimeStamp1 periodStartT, TimeStamp1 periodStopT) {
         Counters myCounters = new Counters();
         try {
-            Collection<Session> sessions = myMongo.find("sessions", new Document(), false, Session.class);
+            Collection<Session> sessions = myMongo.find("sessions", new Document(), true, Session.class);
             System.out.println("getErlangsPerHour:sessions.size:" + sessions.size());
             for (TimeStamp1 snapshot = periodStartT; snapshot.isBefore(periodStopT); snapshot.addHours(1)) {
                 TimeStamp1 period_stop = new TimeStamp1(snapshot);
                 period_stop.addHours(1);
                 double res = getErlangs(sessions, snapshot, period_stop);
-                System.out.println("getErlangsPerHour:res:" + res);
+                //System.out.println("getErlangsPerHour:res:" + res);
                 if (res > 0) {
                     myCounters.updateCounters(snapshot.getNowUnformated_elegant(), res);
                 }

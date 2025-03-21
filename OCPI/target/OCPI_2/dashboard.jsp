@@ -20,7 +20,7 @@
     ServletContext myContext = session.getServletContext();
     Mongo myMongo = (Mongo) myContext.getAttribute("myMongo");
     //------------ active locatioons ----------
-    Collection<Session> sessions = myMongo.find("sessions", new Document(), false, Session.class);
+    Collection<Session> sessions = myMongo.find("sessions", new Document(), true, Session.class);
     List<String> activelocationIds = sessions.stream().map(s -> s.getLocation_id()).collect(Collectors.toList());
     //---
     Collection<Location> locations = myMongo.find("locations", new Document(), false, Location.class);

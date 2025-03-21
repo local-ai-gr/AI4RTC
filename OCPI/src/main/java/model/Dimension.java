@@ -1,10 +1,13 @@
 package model;
 
+import com.google.gson.annotations.Expose;
 import simulation.DimensionType;
 
 public class Dimension {
 
+    @Expose
     private DimensionType type;
+    @Expose
     private double volume;
 
     public Dimension() {

@@ -49,7 +49,7 @@ public class RealTimeKW extends HttpServlet {
         try (PrintWriter out = response.getWriter()) {
             Mongo myMongo = (Mongo) myContext.getAttribute("myMongo");
             Collection<Location> locations = myMongo.find("locations", new Document(), false, Location.class);
-            Collection<Session> activeSessions = myMongo.find("sessions", Filters.eq("status", "ACTIVE"), false, Session.class);
+            Collection<Session> activeSessions = myMongo.find("sessions", Filters.eq("status", "ACTIVE"), true, Session.class);
             Counters KW = new Counters();
             activeSessions.stream().forEach(s -> {
                 Location myLocation = s.getLocation(locations);

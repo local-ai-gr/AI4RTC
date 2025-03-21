@@ -15,8 +15,8 @@ public class GanntObj {
     public GanntObj(long id, String content, String start, String end, String group, String style,double value) {
         this.id = id;
         this.content = content;
-        this.start = start;
-        this.end = end;
+        this.start = start.substring(0,19);
+        this.end = end.substring(0,19);
         this.group = group;
         this.value = value;
         this.style = style;

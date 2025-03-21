@@ -37,7 +37,7 @@
     Mongo myMongo = (Mongo) myContext.getAttribute("myMongo");
     Collection<Location> locations = myMongo.find("locations", new Document(), false, Location.class);
     //------------ active locatioons ----------
-    Collection<Session> sessions = myMongo.find("sessions", new Document(), false, Session.class);
+    Collection<Session> sessions = myMongo.find("sessions", new Document(), true, Session.class);
     List<String> activelocationIds = sessions.stream().map(s -> s.getLocation_id()).collect(Collectors.toList());
     //---
     Circle circle = new Circle(new Point(23.4248902, 38.980903), 2000);//23.8048027,38.0080677

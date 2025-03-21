@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -23,6 +24,7 @@ import nsofiasLib.databases.Mongo;
 import nsofiasLib.time.TimeStamp1;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import simulation.EVChargingStation;
 import static simulation.EVChargingStation.FORMATER;
 import simulation.Event;
 import simulation.EventType;
@@ -33,6 +35,7 @@ import simulation.EventType;
  */
 public class sessionsGanntServlet extends HttpServlet {
 
+    
     private static final long serialVersionUID = 1L;
     int id = 0;
 
@@ -47,6 +50,7 @@ public class sessionsGanntServlet extends HttpServlet {
      */
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        DateTimeFormatter formater = EVChargingStation.FORMATER;
         request.setCharacterEncoding("utf-8");
         response.setCharacterEncoding("utf-8");
         response.setContentType("application/json");
@@ -54,18 +58,25 @@ public class sessionsGanntServlet extends HttpServlet {
         //------- location & timestamps--------
         String location = request.getParameter("location") != null && !request.getParameter("location").isEmpty() ? request.getParameter("location") : "";
         String timeFrom = request.getParameter("timeFrom");
+
         if (timeFrom == null) {
             TimeStamp1 timeFromT = new TimeStamp1();
             timeFromT.addDays(-7);
-            timeFrom = timeFromT.getNowUnformated_elegant().substring(0, 16).replaceAll("-", "/").replaceAll("T", " ");
+            timeFrom = timeFromT.getNowUnformated_elegant()+".000";
+        } else {
+            timeFrom = timeFrom.replaceAll("/", "-").replaceAll(" ", "T") + ".000";
         }
         String timeTo = request.getParameter("timeTo");
         if (timeTo == null) {
             TimeStamp1 timeToT = new TimeStamp1();
-            timeTo = timeToT.getNowUnformated_elegant().substring(0, 16).replaceAll("-", "/").replaceAll("T", " ");
+            timeTo = timeToT.getNowUnformated_elegant()+".000";
+        } else {
+            timeTo = timeTo.replaceAll("/", "-").replaceAll(" ", "T") + ".000";
         }
-        String t1 = timeFrom.substring(0, 16).replaceAll("-", "/").replaceAll("T", " ");
-        String t2 = timeTo.substring(0, 16).replaceAll("-", "/").replaceAll("T", " ");
+        final LocalDateTime T1 = LocalDateTime.parse(timeFrom, formater);
+        final LocalDateTime T2 = LocalDateTime.parse(timeTo, formater);
+        System.out.println("T1:" + T1);
+        System.out.println("T2:" + T2);
         //--------------------------------         
         try (PrintWriter out = response.getWriter()) {
             ServletContext myContext = request.getServletContext();
@@ -74,15 +85,14 @@ public class sessionsGanntServlet extends HttpServlet {
             //Comparator<Session> myComparator = Comparator.comparing((Session v) -> v.getEnd_date_time()).reversed();
             //------filtering ---------------    
             Bson locationFilter = (location != null && !location.isEmpty()) ? Filters.eq("location_id", location) : new Document();
-            Bson timeFilter =  Filters.and(Filters.gte("end_date_time", timeFrom),
-                    Filters.lte("start_date_time", timeTo));
-            Bson filter = Filters.and(locationFilter,timeFilter);
-            //-----------------------------------------
-            Collection<Session> sessions = myMongo.find("sessions", filter, false, Session.class);
-            Collection<Event> events = myMongo.find("events", locationFilter, false, Event.class);
-            //
+            Bson timeFilter = Filters.and(Filters.gte("mydate", T1),
+                    Filters.lte("mydate", T2));
+            Bson filter = Filters.and(locationFilter, timeFilter);
+            Collection<Session> sessions = myMongo.find("sessions", filter, true, Session.class);
+            Collection<Event> events = myMongo.find("events", filter, true, Event.class);
+            //-------------------------------
             String type = request.getParameter("type");
-            //-----------------------------------------------------
+            //
             if (type == null || type.isEmpty() || type.equals("gannt")) {
                 List<GanntObj> ganntList = new ArrayList<>();
                 sessions.stream().
@@ -103,6 +113,7 @@ public class sessionsGanntServlet extends HttpServlet {
                                                 ganntList.add(new GanntObj(id++, power, period_start_date_time, period_end_date_time, groupName, null, 0.0));
                                             }
                                         } catch (Exception ex) {
+                                            ex.printStackTrace();
                                         }
                                     });
                         });
@@ -110,14 +121,18 @@ public class sessionsGanntServlet extends HttpServlet {
                 events.stream().
                         filter(e -> e.getEventType() == EventType.DOWNGRADE_EVENT)
                         .forEach(e -> {
-                            Location myLocation = locations.stream().filter(l -> l.getId().equals(e.getLocation_id())).findAny().orElse(null);
-                            LocalDateTime ldt = LocalDateTime.parse(e.getEventTime(), FORMATER);
-                            LocalDateTime ldt1 = ldt.plusSeconds(1);
-                            String eventEnd = ldt1.format(FORMATER);
-                            String connector = e.getConnectorId();
-                            String groupName = request.getParameter("location") == null ? myLocation.getName() + " " + connector : connector;
-                            ganntList.add(new GanntObj(id++, "", e.getEventTime(), eventEnd, "Downgrades", "background-color: red; border-color: red;", 0.0));
-                            ganntList.add(new GanntObj(id++, "", e.getEventTime(), eventEnd, groupName, "background-color: red; border-color: red;", 0.0));
+                            try {
+                                Location myLocation = locations.stream().filter(l -> l.getId().equals(e.getLocation_id())).findAny().orElse(null);
+                                LocalDateTime ldt = LocalDateTime.parse(e.getEventTime(), FORMATER);
+                                LocalDateTime ldt1 = ldt.plusSeconds(1);
+                                String eventEnd = ldt1.format(FORMATER);
+                                String connector = e.getConnectorId();
+                                String groupName = request.getParameter("location") == null ? myLocation.getName() + " " + connector : connector;
+                                ganntList.add(new GanntObj(id++, "", e.getEventTime(), eventEnd, "Downgrades", "background-color: red; border-color: red;", 0.0));
+                                ganntList.add(new GanntObj(id++, "", e.getEventTime(), eventEnd, groupName, "background-color: red; border-color: red;", 0.0));
+                            } catch (Exception ex) {
+                                ex.printStackTrace();
+                            }
                         });
 
                 out.println(new Gson().toJson(ganntList));
@@ -128,20 +143,24 @@ public class sessionsGanntServlet extends HttpServlet {
                 Bson myLocationFilter = (location != null && !location.isEmpty()) ? Filters.eq("id", location) : new Document();
                 List<Location> myLocations = myMongo.find("locations", myLocationFilter, false, Location.class);
                 myLocations.forEach(myLocation -> {
-                    //double erlangs = myLocation.getErlangs(myMongo, new TimeStamp1(t1), new TimeStamp1(t2));
-                    System.out.println("erlangs for " + myLocation.getName());
-                    Map<String, Double> erlangsPerHour = myLocation.getErlangsPerHour(myMongo, new TimeStamp1(t1), new TimeStamp1(t2));
-                    erlangsPerHour.forEach((k, v) -> {
-                        try {
-                            TimeStamp1 endTime = TimeStamp1.fromUnformated_elegant(k);
-                            endTime.addHours(1);
-                            String _endTime = endTime.getNowUnformated_elegant();
-                            //System.out.println(_endTime);
-                            ganntList.add(new GanntObj(1, "", k, _endTime, myLocation.getName(), null, v));
-                        } catch (Exception ex) {
-                            Logger.getLogger(sessionsGanntServlet.class.getName()).log(Level.SEVERE, null, ex);
-                        }
-                    });
+                    try {
+                        //double erlangs = myLocation.getErlangs(myMongo, new TimeStamp1(t1), new TimeStamp1(t2));
+                        System.out.println("erlangs for " + myLocation.getName());
+                        Map<String, Double> erlangsPerHour = myLocation.getErlangsPerHour(myMongo, new TimeStamp1(T1), new TimeStamp1(T2));
+                        erlangsPerHour.forEach((k, v) -> {
+                            try {
+                                TimeStamp1 endTime = TimeStamp1.fromUnformated_elegant(k);
+                                endTime.addHours(1);
+                                String _endTime = endTime.getNowUnformated_elegant();
+                                //System.out.println(_endTime);
+                                ganntList.add(new GanntObj(1, "", k, _endTime, myLocation.getName(), null, v));
+                            } catch (Exception ex) {
+                                Logger.getLogger(sessionsGanntServlet.class.getName()).log(Level.SEVERE, null, ex);
+                            }
+                        });
+                    } catch (Exception ex) {
+                        Logger.getLogger(sessionsGanntServlet.class.getName()).log(Level.SEVERE, null, ex);
+                    }
                 });
                 long id = 1;
                 for (GanntObj ho : ganntList) {
@@ -154,20 +173,24 @@ public class sessionsGanntServlet extends HttpServlet {
                 Bson myLocationFilter = (location != null && !location.isEmpty()) ? Filters.eq("id", location) : new Document();
                 List<Location> myLocations = myMongo.find("locations", myLocationFilter, false, Location.class);
                 myLocations.forEach(myLocation -> {
-                    double kwh = myLocation.getKWH(myMongo, new TimeStamp1(t1), new TimeStamp1(t2));
-                    System.out.println("kwh=" + kwh);
-                    Map<String, Double> kwhPerHour = myLocation.getKWHPerHour(myMongo, new TimeStamp1(t1), new TimeStamp1(t2));
-                    kwhPerHour.forEach((k, v) -> {
-                        try {
-                            TimeStamp1 endTime = TimeStamp1.fromUnformated_elegant(k);
-                            endTime.addHours(1);
-                            String _endTime = endTime.getNowUnformated_elegant();
-                            //System.out.println(_endTime);                        
-                            ganntList.add(new GanntObj(1, "", k, _endTime, myLocation.getName(), null, v));
-                        } catch (Exception ex) {
-                            Logger.getLogger(sessionsGanntServlet.class.getName()).log(Level.SEVERE, null, ex);
-                        }
-                    });
+                    try {
+                        double kwh = myLocation.getKWH(myMongo, new TimeStamp1(T1), new TimeStamp1(T2));
+                        System.out.println("kwh=" + kwh);
+                        Map<String, Double> kwhPerHour = myLocation.getKWHPerHour(myMongo, new TimeStamp1(T1), new TimeStamp1(T2));
+                        kwhPerHour.forEach((k, v) -> {
+                            try {
+                                TimeStamp1 endTime = TimeStamp1.fromUnformated_elegant(k);
+                                endTime.addHours(1);
+                                String _endTime = endTime.getNowUnformated_elegant();
+                                //System.out.println(_endTime);                        
+                                ganntList.add(new GanntObj(1, "", k, _endTime, myLocation.getName(), null, v));
+                            } catch (Exception ex) {
+                                Logger.getLogger(sessionsGanntServlet.class.getName()).log(Level.SEVERE, null, ex);
+                            }
+                        });
+                    } catch (Exception ex) {
+                        Logger.getLogger(sessionsGanntServlet.class.getName()).log(Level.SEVERE, null, ex);
+                    }
                 });
                 long id = 1;
                 for (GanntObj ho : ganntList) {

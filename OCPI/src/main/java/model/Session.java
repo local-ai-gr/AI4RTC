@@ -4,23 +4,36 @@
  */
 package model;
 
+import com.google.gson.annotations.Expose;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
 public class Session {
 
+    @Expose
     private String id;
+    @Expose
     private String start_date_time;
+    @Expose
     private String end_date_time;
+    @Expose
     private double kwh;
+    @Expose
     private String location_id;
+    @Expose
     private String evse_uid;
+    @Expose
     private String status;
+    @Expose
     private String connector_id;
+    @Expose
     private String last_updated;
+    @Expose
     private String country_code;
+    @Expose
     private String party_id;
+    @Expose
     private List<ChargingPeriod> charging_periods;
     //private Location location;
 
@@ -65,10 +78,9 @@ public class Session {
      * @param locations
      * @return the location
      */
-    public Location getLocation( Collection<Location> locations) {
-        return locations.stream().filter(l->l.getId().equals(this.getLocation_id())).findAny().orElse(null);
+    public Location getLocation(Collection<Location> locations) {
+        return locations.stream().filter(l -> l.getId().equals(this.getLocation_id())).findAny().orElse(null);
     }
-
 
     /**
      * @return the start_date_time

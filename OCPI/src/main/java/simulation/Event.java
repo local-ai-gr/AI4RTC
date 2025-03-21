@@ -4,7 +4,7 @@
  */
 package simulation;
 
-import java.time.LocalDateTime;
+import com.google.gson.annotations.Expose;
 
 /**
  *
@@ -12,11 +12,17 @@ import java.time.LocalDateTime;
  */
 public class Event {
 
+    @Expose
     private final String eventTime;
+    @Expose
     private final EventType eventType;
+    @Expose
     private final String location_id;
+    @Expose
     private final String sessionId;
+    @Expose
     private final String connectorId;
+    @Expose
     private final double powerValue;
 
     public Event(String eventTime, EventType eventType, String locationId, String sessionId, String connectorId, double powerValue) {

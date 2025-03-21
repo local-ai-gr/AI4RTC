@@ -5,6 +5,7 @@
 package model;
 // Getters and setters for the fie
 
+import com.google.gson.annotations.Expose;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -14,8 +15,11 @@ import simulation.DimensionType;
 
 public class ChargingPeriod {
 
+    @Expose
     private String start_date_time;
+    @Expose
     private String end_date_time;
+    @Expose
     private List<Dimension> dimensions = new ArrayList<>();
 
     /**

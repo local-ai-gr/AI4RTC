@@ -38,15 +38,15 @@
             //-------------- save sessions ----------------------------     
             String mongoURL = Parameters.loadStringValue(System.getenv("APPLICATIONS_PATH") + "/OCPI/conf/parameters.properties", "mongoURL", "UTF8", "mongodb://nsofias:#1Vasilokori@mongo:27017");
             Mongo myMongo = new Mongo(mongoURL, "OCPI");
-            myMongo.deleteAll("sessions");
-            myMongo.deleteAll("events");
+            myMongo.dropCollection("sessions");
+            myMongo.dropCollection("events");
             //-------------
             out.println("<h1>sessions</h1>");
             station.getSessions()
                     .forEach(chs -> {
                         Session s = chs.toSession();
                         try {
-                            myMongo.add("sessions", s, LocalDateTime.now());
+                            myMongo.add("sessions", s, LocalDateTime.parse(s.getStart_date_time(),formatter));
                             out1.println("\n Added Session: " + new Gson().toJson(s));
                         } catch (Exception e) {
                             try {
@@ -60,7 +60,7 @@
                     .forEach(ev -> {
 
                         try {
-                            myMongo.add("events", ev, LocalDateTime.now());
+                            myMongo.add("events", ev, LocalDateTime.parse(ev.getEventTime(),formatter));
                             out1.println("\n Added event " + new Gson().toJson(ev));
                         } catch (Exception e) {
                             try {

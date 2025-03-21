@@ -30,9 +30,9 @@
     ServletContext myContext = session.getServletContext();
     Mongo myMongo = (Mongo) myContext.getAttribute("myMongo");
     if (request.getParameter("deleteAll") != null) {
-        myMongo.delete("sessions", new Document());
+        myMongo.delete("sessions", new Document());       
     }
-    Collection<Session> sessions = myMongo.find("sessions", new Document(), false, Session.class);
+    Collection<Session> sessions = myMongo.find("sessions", new Document(), true, Session.class);
     final JspWriter out1 = out;
     if (request.getParameter("loadFromFile") != null) {
         String filename = System.getenv("APPLICATIONS_PATH") + "/OCPI/conf/sessions.csv";
