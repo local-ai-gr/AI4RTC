@@ -30,12 +30,12 @@
     if (timeFrom == null) {
         TimeStamp1 timeFromT = new TimeStamp1();
         timeFromT.addDays(-7);
-        timeFrom = timeFromT.getNowUnformated_elegant().substring(0, 16).replaceAll("-", "/").replaceAll("T", " ");
+        timeFrom = timeFromT.getNowUnformated_elegant().substring(0, 19).replaceAll("-", "/").replaceAll("T", " ");
     }
     String timeTo = request.getParameter("timeTo");
     if (timeTo == null) {
         TimeStamp1 timeToT = new TimeStamp1();
-        timeTo = timeToT.getNowUnformated_elegant().substring(0, 16).replaceAll("-", "/").replaceAll("T", " ");
+        timeTo = timeToT.getNowUnformated_elegant().substring(0, 19).replaceAll("-", "/").replaceAll("T", " ");
     }
     //--------------------------------
 %>

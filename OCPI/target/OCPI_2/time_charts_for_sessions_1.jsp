@@ -12,12 +12,12 @@
     if (timeFrom == null) {
         TimeStamp1 timeFromT = new TimeStamp1();
         timeFromT.addDays(-7);
-        timeFrom = timeFromT.getNowUnformated_elegant().substring(0, 16).replaceAll("-", "/").replaceAll("T", " ");
+        timeFrom = timeFromT.getNowUnformated_elegant().substring(0, 19).replaceAll("-", "/").replaceAll("T", " ");
     }
     String timeTo = request.getParameter("timeTo");
     if (timeTo == null) {
         TimeStamp1 timeToT = new TimeStamp1();
-        timeTo = timeToT.getNowUnformated_elegant().substring(0, 16).replaceAll("-", "/").replaceAll("T", " ");
+        timeTo = timeToT.getNowUnformated_elegant().substring(0, 19).replaceAll("-", "/").replaceAll("T", " ");
     }
     //--------------------------------
     String type = request.getParameter("type") != null ? request.getParameter("type") : "";
@@ -29,9 +29,9 @@
         title = "Energy consumption";
         yTitle = "kWh";
     }
-    
-    String params = location != null ?  "?type=" + type + "&location=" + location : "?type=" + type;
-    params = params+"&timeFrom="+timeFrom+"&timeTo="+timeTo;    
+
+    String params = location != null ? "?type=" + type + "&location=" + location : "?type=" + type;
+    params = params + "&timeFrom=" + timeFrom + "&timeTo=" + timeTo;
     String sourceUrl = request.getRequestURL().toString().replace("time_charts_for_sessions_1.jsp", "") + "sessionsGanntServlet" + params;
     out.println("<p>");
 %>
@@ -69,16 +69,16 @@
                 const items = new vis.DataSet(eventData.map(event => ({
                         x: new Date(event.start), // Start time on X-axis
                         y: event.value, // Value on Y-axis (height of bars)
-                        end: new Date(event.end),    // End time for intervals
+                        end: new Date(event.end), // End time for intervals
                     })));
                 var minStartTime = new Date(Math.min.apply(null, eventData.map(event => new Date(event.start))));
                 var maxEndTime = new Date(Math.max.apply(null, eventData.map(event => new Date(event.end))));
                 var startFrom = new Date(maxEndTime);
                 startFrom.setMonth(maxEndTime.getMonth() - 1);
-               
+
                 const options = {
-                    start:startFrom,
-                    end: new Date(Math.max(...eventData.map(event => new Date(event.end)))),
+                    min: minStartTime,
+                    max: maxEndTime,
                     style: 'bar', // Sets bar style visualization
                     barChart: {width: 50, align: 'center'}, // Width of bars
                     drawPoints: false,

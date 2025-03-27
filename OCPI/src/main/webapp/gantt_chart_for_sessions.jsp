@@ -14,13 +14,13 @@
         TimeStamp1 timeToT = new TimeStamp1();
         timeTo = timeToT.getNowUnformated_elegant().substring(0, 19).replaceAll("-", "/").replaceAll("T", " ");
     }
-    
+
     //--------------------------------
-    String params = location != null ? "?type=gannt&location="+location : "?type=gannt";
-    params = params+"&timeFrom="+timeFrom+"&timeTo="+timeTo;
+    String params = location != null ? "?type=gannt&location=" + location : "?type=gannt";
+    params = params + "&timeFrom=" + URLEncoder.encode(timeFrom, "utf8") + "&timeTo=" + URLEncoder.encode(timeTo, "utf8");
     String sourceUrl = "sessionsGanntServlet" + params;
     if (location != null) {
-       // out.println("<h1>timeline for Location" + location + "</h1>");
+        // out.println("<h1>timeline for Location" + location + "</h1>");
     }
     //out.println(sourceUrl);
 %>
@@ -49,11 +49,12 @@
             // Function to fetch event data from a remote URL
             async function fetchEventData() {
                 try {
-                    // Make a GET request to the remote URL
                     const response = await fetch('<%=sourceUrl%>');
-                    console.log(response);
-                    // Parse the JSON response
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
                     const eventData = await response.json();
+                    console.log(eventData);  // Log event data to verify its format
                     initializeTimeline(eventData);
                 } catch (error) {
                     console.error('Error fetching event data:', error);
@@ -63,42 +64,33 @@
 
             // Function to initialize the timeline with the fetched event data
             function initializeTimeline(eventData) {
-                // Create a DataSet from the fetched event data
-                var items = new vis.DataSet(eventData);
-                var groupIds = [...new Set(items.get().map(item => item.group))];
-                // Automatically create groups based on the unique group IDs
-                var groups = new vis.DataSet(
-                        groupIds.map(groupId => ({id: groupId, content: groupId}))
-                        );
-                var minStartTime = new Date(Math.min.apply(null, eventData.map(event => new Date(event.start))));
-                var maxEndTime = new Date(Math.max.apply(null, eventData.map(event => new Date(event.end))));
-                var startFrom = new Date(maxEndTime);
-                startFrom.setDate(startFrom.getDate() - 1);
+                if (eventData && eventData.length > 0) {
+                    var items = new vis.DataSet(eventData);
+                    var groupIds = [...new Set(items.get().map(item => item.group))];
+                    var groups = new vis.DataSet(
+                            groupIds.map(groupId => ({id: groupId, content: groupId}))
+                            );
+                    var minStartTime = new Date(Math.min.apply(null, eventData.map(event => new Date(event.start))));
+                    var maxEndTime = new Date(Math.max.apply(null, eventData.map(event => new Date(event.end))));
 
-                var options = {
-                    width: '100%', // Set the width of the timeline container to 100%
-                    min: minStartTime, // Set the start time of the display
-                    max: maxEndTime, // Set the end time of the display
-                    stack: false, // Disable event stacking to prevent wrapping
-                    //start: startFrom, // 30 days back from today
-                    //end: maxEndTime,
-                    align: "center",
-                    groupOrder: 'content',
-                    //horizontalScroll: true,
-                    editable: false
-                };
-                var timeline = new vis.Timeline(document.getElementById('timeline'), items, groups, options);
-                // Step 1: Show the full timeline
-                timeline.fit();
-
-                // Step 2: After a small delay, zoom into the last day
-                /*
-                 setTimeout(() => {
-                 timeline.setWindow(startFrom, maxEndTime);
-                 }, 500);*/
-
+                    var options = {
+                        width: '100%',
+                        min: minStartTime,
+                        max: maxEndTime,
+                        stack: false,
+                        align: "center",
+                        groupOrder: 'content',
+                        editable: false
+                    };
+                    var timeline = new vis.Timeline(document.getElementById('timeline'), items, groups, options);
+                    timeline.fit();
+                } else {
+                    console.error("No event data found");
+                }
             }
-            fetchEventData();
+            document.addEventListener('DOMContentLoaded', function () {
+                fetchEventData();
+            });
         </script>
     </body>
 </html>

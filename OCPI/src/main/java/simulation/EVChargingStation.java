@@ -8,10 +8,15 @@ import static java.time.temporal.ChronoUnit.SECONDS;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import static java.util.stream.Collectors.toList;
 import model.ChargingPeriod;
 
@@ -43,76 +48,93 @@ public class EVChargingStation {
         this.locationId = locationId;
     }
 
-    public void simulate_period(LocalDateTime T1, LocalDateTime T2) {
+    public void simulate_period(LocalDateTime T1, LocalDateTime T2, Map<String, Double> erlangsPerHour) {
+
         LocalDateTime T = T1;
         while (T.isBefore(T2)) {
             System.out.println("Simulating day   " + T.format(FORMATER));
-            simulateDay(T);
+            simulateDay(T, erlangsPerHour);
             T = T.plusDays(1);
         }
         // correct the null end session of the last Charging_period        
         getSessions().forEach(session -> {
             List<ChargingPeriod> charging_periods = session.getCharging_periods();
-        if (!charging_periods.isEmpty()){
-           ChargingPeriod previousPeriod =  charging_periods.get(charging_periods.size()-1);//get the last
-           DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
-           // --- set previousPeriod.setEnd_date_time  and energy ---
-           previousPeriod.setEnd_date_time(session.getStopTime().format(formatter));// end of previous period
-           LocalDateTime  T_1 = previousPeriod.getStartLocalDateTime();
-           LocalDateTime  T_2 = previousPeriod.getEndLocalDateTime();
-           long previousDuration = T_1.until(T_2, SECONDS);
-           double previousPowerlevel = previousPeriod.getChargingPeriodPower();
-           double energy = (previousPowerlevel* previousDuration)/3600;
-           previousPeriod.setChargingPeriodEnergy(energy);
-        }            
+            if (!charging_periods.isEmpty()) {
+                ChargingPeriod previousPeriod = charging_periods.get(charging_periods.size() - 1);//get the last
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
+                // --- set previousPeriod.setEnd_date_time  and energy ---
+                previousPeriod.setEnd_date_time(session.getStopTime().format(formatter));// end of previous period
+                LocalDateTime T_1 = previousPeriod.getStartLocalDateTime();
+                LocalDateTime T_2 = previousPeriod.getEndLocalDateTime();
+                long previousDuration = T_1.until(T_2, SECONDS);
+                double previousPowerlevel = previousPeriod.getChargingPeriodPower();
+                double energy = (previousPowerlevel * previousDuration) / 3600;
+                previousPeriod.setChargingPeriodEnergy(energy);
+            }
         });
     }
 
-    public void simulateDay(LocalDateTime day) {
+    public void simulateDay(LocalDateTime day, Map<String, Double> erlangsPerHour) {
         LocalDateTime now = LocalDateTime.now();
         int sessionCount = 10 + random.nextInt(11);
 
-        List<LocalDateTime> localDateTimes = new ArrayList<>();
+        Map<LocalDateTime, String> newEventsDateTimes = new HashMap<>();
         for (int i = 0; i < sessionCount; i++) {
-            localDateTimes.add(generateRandomStartTime(day));
+            newEventsDateTimes.put(generateRandomStartTime(day), "SESSION");
         }
-        localDateTimes.sort(Comparator.naturalOrder());
-        for (LocalDateTime startTime : localDateTimes) {
-            if (startTime.isAfter(now)) {
-                continue;
-            }
-            //System.out.println("new start time->"+startTime);
-            int durationMinutes = 30 + random.nextInt(211);
-            LocalDateTime stopTime = startTime.plusMinutes(durationMinutes);
-
+        Set<LocalDateTime> predictiveDegradations = generateTimesForDegradations(day, erlangsPerHour);
+        predictiveDegradations.forEach(e -> newEventsDateTimes.put(e, "DEGRADATION"));
+        Map<LocalDateTime, String> newEventsDateTimesSorted =  newEventsDateTimes.entrySet().stream().sorted((Map.Entry.comparingByKey())).collect(Collectors.toMap((Map.Entry<LocalDateTime, String> e)->e.getKey(), (Map.Entry<LocalDateTime, String>  e)->e.getValue()));
+        //---
+        newEventsDateTimesSorted.forEach((startTime, eventCategory) -> {
+            System.out.println("eventCategory:" + eventCategory);
             List<ChargingSession> currentSessions = getSessions().stream()
                     .filter(s -> s.getStartTime().isBefore(startTime) && s.getStopTime().isAfter(startTime))
                     .sorted(Comparator.comparing((ChargingSession s) -> s.getPowerLevel()).reversed()).collect(toList());
-            List<String> busyConnectors = currentSessions.stream().map(s -> s.getConnectorId()).collect(toList());
+            if (eventCategory.equals("SESSION")) {
+                //  for (LocalDateTime startTime : newEventsDateTimes) {
+                if (startTime.isAfter(now)) {
+                    return;
+                }
+                //System.out.println("new start time->"+startTime);
+                int durationMinutes = 30 + random.nextInt(211);
+                LocalDateTime stopTime = startTime.plusMinutes(durationMinutes);
 
-            Optional<String> connectorId_ = Arrays.asList(connectorIds).stream().filter(c -> !busyConnectors.contains(c)).findFirst();
+                List<String> busyConnectors = currentSessions.stream().map(s -> s.getConnectorId()).collect(toList());
 
-            if (connectorId_.isEmpty()) {
-                //System.out.println("LOST CUSTOMER. All connectors are busy!!!");
-                getEvents().add(new Event(startTime.format(FORMATER), EventType.NOT_AVAILABLE_CONNECTOR_EVENT, locationId, "N/A", "N/A", 0));
-                continue;
+                Optional<String> connectorId_ = Arrays.asList(connectorIds).stream().filter(c -> !busyConnectors.contains(c)).findFirst();
+
+                if (connectorId_.isEmpty()) {
+                    //System.out.println("LOST CUSTOMER. All connectors are busy!!!");
+                    getEvents().add(new Event(startTime.format(FORMATER), EventType.NOT_AVAILABLE_CONNECTOR_EVENT, locationId, "N/A", "N/A", 0));
+                    return;
+                }
+                String connectorId = connectorId_.get();
+                int assignedPower = assignPowerLevels(currentSessions, startTime);
+                if (assignedPower == 0) {
+                    getEvents().add(new Event(startTime.format(FORMATER), EventType.NOT_AVAILABLE_POWER_EVENT, locationId, "N/A", "N/A", 0));
+                    return;
+                }
+                String sessionId = new UUID(secureRandom.nextLong(), secureRandom.nextLong()).toString();
+
+                ChargingSession session = new ChargingSession(getLocationId(), sessionId, connectorId, startTime, stopTime, 0, assignedPower);
+                getSessions().add(session);
+                //System.out.println("new session:" + session);
+                getEvents().add(new Event(startTime.format(FORMATER), EventType.START_SESSION_EVENT, locationId, sessionId, connectorId, assignedPower));
+                getEvents().add(new Event(stopTime.format(FORMATER), EventType.STOP_SESSION_EVENT, locationId, sessionId, connectorId, 0));
+                //activeSessionsByConnector.remove(connectorId);
+            } else if (eventCategory.equals("DEGRADATION")) {
+                getEvents().add(new Event(startTime.format(FORMATER), EventType.DOWNGRADE_EVENT_PREDICTIVE, locationId, "", "", 0));
+                for (ChargingSession s : currentSessions) {
+                    if (s.getPowerLevel() == HIGH) {
+                        // s.changePowerLevel(startTime, MEDIUM);
+                        //System.out.println("Predictive DOWNGRADE Event generated !!!");                       
+                    }
+                }
+
             }
-            String connectorId = connectorId_.get();
-            int assignedPower = assignPowerLevels(currentSessions, startTime);
-            if (assignedPower == 0) {
-                getEvents().add(new Event(startTime.format(FORMATER), EventType.NOT_AVAILABLE_POWER_EVENT, locationId, "N/A", "N/A", 0));
-                continue;
-            }
-            String sessionId = new UUID(secureRandom.nextLong(), secureRandom.nextLong()).toString();
-
-            ChargingSession session = new ChargingSession(getLocationId(), sessionId, connectorId, startTime, stopTime, 0, assignedPower);
-            getSessions().add(session);
-            //System.out.println("new session:" + session);
-            getEvents().add(new Event(startTime.format(FORMATER), EventType.START_SESSION_EVENT, locationId, sessionId, connectorId, assignedPower));
-            getEvents().add(new Event(stopTime.format(FORMATER), EventType.STOP_SESSION_EVENT, locationId, sessionId, connectorId, 0));
-            //activeSessionsByConnector.remove(connectorId);
-        }
-        getSessions().stream().forEach(s -> generatePowerEvents(s));
+        });
+        //getSessions().stream().forEach(s -> generatePowerEvents(s));
 
     }
 
@@ -140,16 +162,6 @@ public class EVChargingStation {
         return 0;
     }
 
-    private void generatePowerEvents(ChargingSession session) {
-        LocalDateTime eventTime = session.getStartTime();
-        LocalDateTime endTime = session.getStopTime();
-
-        while (eventTime.isBefore(endTime)) {
-            //getEvents().add(new Event(eventTime, EventType.POWER_INFO_EVENT, locationId, session.getSessionId(), session.getConnectorId(), session.getPowerLevel(eventTime)));
-            eventTime = eventTime.plusMinutes(1);
-        }
-    }
-
     private LocalDateTime generateRandomStartTime(LocalDateTime day) {
         int peakHourWeight = 3;
         boolean peakHour = random.nextInt(peakHourWeight) == 0;
@@ -160,9 +172,29 @@ public class EVChargingStation {
         } else {
             hour = random.nextInt(24);
         }
-
         int minute = random.nextInt(60);
         return day.with(LocalTime.of(hour, minute));
+    }
+
+    public static Set<LocalDateTime> generateTimesForDegradations(LocalDateTime day, Map<String, Double> erlangsPerHour) {
+        DateTimeFormatter myFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH");
+        System.out.println("erlangsPerHour:+" + erlangsPerHour.size());
+        // Start at the beginning of the day
+        LocalDateTime startOfDay = day.toLocalDate().atStartOfDay();
+        Set<LocalDateTime> timeList = new HashSet<>();
+        // Loop through every minute of the day (24 hours * 60 minutes = 1440 minutes)
+        String step_ = "";
+        for (int i = 0; i < 1440; i++) {
+            LocalDateTime step = startOfDay.plusMinutes(i);
+            if (!step.format(myFormatter).equals(step_)) {
+                step_ = step.format(myFormatter);
+                if (erlangsPerHour.get(step_) != null && erlangsPerHour.get(step_) >= 4) {
+                    System.out.println("DOWNGRADE FOUND!!! at " + step.toString());
+                    timeList.add(step);
+                }
+            }
+        }
+        return timeList;
     }
 
     /**
@@ -193,7 +225,7 @@ public class EVChargingStation {
         //
         LocalDateTime T1 = LocalDateTime.parse("2025-01-01T00:00:00.000", FORMATER);
         LocalDateTime T2 = LocalDateTime.parse("2025-03-31T00:00:00.000", FORMATER);
-        station.simulate_period(T1, T2);
+        //station.simulate_period(T1, T2);
     }
 
 }

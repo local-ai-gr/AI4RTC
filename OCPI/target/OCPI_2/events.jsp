@@ -5,6 +5,7 @@
 xxx
 --%>
 
+<%@page import="java.util.Comparator"%>
 <%@page import="simulation.Event"%>
 <%@page import="org.bson.Document"%>
 <%@page import="com.mongodb.client.model.Filters"%>
@@ -20,7 +21,7 @@ xxx
 <%
     ServletContext myContext = session.getServletContext();
     Mongo myMongo = (Mongo) myContext.getAttribute("myMongo");
-    Collection<Event> cdrs = myMongo.find("events", new Document(), false,Event.class);    
+    Collection<Event> events = myMongo.find("events", new Document(), false,Event.class);    
 %>
 <html>
     <head>
@@ -31,7 +32,7 @@ xxx
         <h1>Events (from DB)</h1>
         <%
             final JspWriter out1 = out;
-            cdrs.stream().forEach(v -> {
+            events.stream().sorted(Comparator.comparing(e->e.getEventTime())).forEach(v -> {
                 try {
                     out1.println("<p>" + new Gson().toJson(v));
                 } catch (Exception e) {

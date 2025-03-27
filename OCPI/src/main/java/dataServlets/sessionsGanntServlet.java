@@ -35,7 +35,6 @@ import simulation.EventType;
  */
 public class sessionsGanntServlet extends HttpServlet {
 
-    
     private static final long serialVersionUID = 1L;
     int id = 0;
 
@@ -62,14 +61,14 @@ public class sessionsGanntServlet extends HttpServlet {
         if (timeFrom == null) {
             TimeStamp1 timeFromT = new TimeStamp1();
             timeFromT.addDays(-7);
-            timeFrom = timeFromT.getNowUnformated_elegant()+".000";
+            timeFrom = timeFromT.getNowUnformated_elegant() + ".000";
         } else {
             timeFrom = timeFrom.replaceAll("/", "-").replaceAll(" ", "T") + ".000";
         }
         String timeTo = request.getParameter("timeTo");
         if (timeTo == null) {
             TimeStamp1 timeToT = new TimeStamp1();
-            timeTo = timeToT.getNowUnformated_elegant()+".000";
+            timeTo = timeToT.getNowUnformated_elegant() + ".000";
         } else {
             timeTo = timeTo.replaceAll("/", "-").replaceAll(" ", "T") + ".000";
         }
@@ -118,20 +117,24 @@ public class sessionsGanntServlet extends HttpServlet {
                                     });
                         });
 
-                events.stream().
-                        filter(e -> e.getEventType() == EventType.DOWNGRADE_EVENT)
+                events.stream()
                         .forEach(e -> {
-                            try {
-                                Location myLocation = locations.stream().filter(l -> l.getId().equals(e.getLocation_id())).findAny().orElse(null);
-                                LocalDateTime ldt = LocalDateTime.parse(e.getEventTime(), FORMATER);
-                                LocalDateTime ldt1 = ldt.plusSeconds(1);
-                                String eventEnd = ldt1.format(FORMATER);
-                                String connector = e.getConnectorId();
-                                String groupName = request.getParameter("location") == null ? myLocation.getName() + " " + connector : connector;
-                                ganntList.add(new GanntObj(id++, "", e.getEventTime(), eventEnd, "Downgrades", "background-color: red; border-color: red;", 0.0));
-                                ganntList.add(new GanntObj(id++, "", e.getEventTime(), eventEnd, groupName, "background-color: red; border-color: red;", 0.0));
-                            } catch (Exception ex) {
-                                ex.printStackTrace();
+                            Location myLocation = locations.stream().filter(l -> l.getId().equals(e.getLocation_id())).findAny().orElse(null);
+                            LocalDateTime ldt = LocalDateTime.parse(e.getEventTime(), FORMATER);
+                            LocalDateTime ldt1 = ldt.plusSeconds(1);
+                            String eventEnd = ldt1.format(FORMATER);
+                            String connector = e.getConnectorId();
+                            String groupName = request.getParameter("location") == null ? myLocation.getName() + " " + connector : connector;
+                            if (e.getEventType() == EventType.DOWNGRADE_EVENT) {
+                                try {
+                                    ganntList.add(new GanntObj(id++, "", e.getEventTime(), eventEnd, "Downgrades", "background-color: red; border-color: red;", 0.0));
+                                    ganntList.add(new GanntObj(id++, "", e.getEventTime(), eventEnd, groupName, "background-color: red; border-color: red;", 0.0));
+                                } catch (Exception ex) {
+                                    ex.printStackTrace();
+                                }
+                            } else if (e.getEventType() == EventType.DOWNGRADE_EVENT_PREDICTIVE) {
+                                ganntList.add(new GanntObj(id++, "", e.getEventTime(), eventEnd, "Predictive Downgrades", "background-color: blue; border-color: blue;", 0.0));
+
                             }
                         });
 
@@ -149,11 +152,11 @@ public class sessionsGanntServlet extends HttpServlet {
                         Map<String, Double> erlangsPerHour = myLocation.getErlangsPerHour(myMongo, new TimeStamp1(T1), new TimeStamp1(T2));
                         erlangsPerHour.forEach((k, v) -> {
                             try {
-                                TimeStamp1 endTime = TimeStamp1.fromUnformated_elegant(k);
+                                TimeStamp1 endTime = TimeStamp1.fromUnformated_elegant(k + ":00:00.000");
                                 endTime.addHours(1);
                                 String _endTime = endTime.getNowUnformated_elegant();
                                 //System.out.println(_endTime);
-                                ganntList.add(new GanntObj(1, "", k, _endTime, myLocation.getName(), null, v));
+                                ganntList.add(new GanntObj(1, "", k + ":00:00.000", _endTime, myLocation.getName(), null, v));
                             } catch (Exception ex) {
                                 Logger.getLogger(sessionsGanntServlet.class.getName()).log(Level.SEVERE, null, ex);
                             }

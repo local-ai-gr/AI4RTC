@@ -180,7 +180,7 @@ public class Location {
                 double res = getErlangs(sessions, snapshot, period_stop);
                 //System.out.println("getErlangsPerHour:res:" + res);
                 if (res > 0) {
-                    myCounters.updateCounters(snapshot.getNowUnformated_elegant(), res);
+                    myCounters.updateCounters(snapshot.getNowUnformated_elegant().substring(0,13), res);
                 }
             }
         } catch (Exception e) {
