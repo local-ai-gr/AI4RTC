@@ -69,7 +69,7 @@
                 const items = new vis.DataSet(eventData.map(event => ({
                         x: new Date(event.start), // Start time on X-axis
                         y: event.value, // Value on Y-axis (height of bars)
-                        end: new Date(event.end), // End time for intervals
+                        end: new Date(event.end) // End time for intervals
                     })));
                 var minStartTime = new Date(Math.min.apply(null, eventData.map(event => new Date(event.start))));
                 var maxEndTime = new Date(Math.max.apply(null, eventData.map(event => new Date(event.end))));
@@ -91,7 +91,7 @@
                         }
                     },
                     timeAxis: {
-                        scale: 'day', // Time scale granularity
+                        //scale: 'day', // Time scale granularity
                         //step: 6
                     }
                 };

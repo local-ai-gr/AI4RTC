@@ -35,9 +35,8 @@
         <style>
             /* Set the height of the timeline container */
             #timeline {
-                height: 800px;
-            }
-
+                height: 400px;
+            }            
         </style>
     </head>
     <body>            

@@ -30,10 +30,10 @@ import model.ChargingPeriod;
  */
 public class EVChargingStation {
 
-    private static final int MAXIMUM_POWER = 10;
-    private static final int HIGH = 6;
-    private static final int MEDIUM = 4;
-    private static final int LOW = 2;
+    private final int MAXIMUM_PLAN;// = 16;
+    private final int HIGH_PLAN;// = 6;
+    private final int MEDIUM_PLAN;// = 4;
+    private final int LOW_PLAN;// = 2;
     private final String locationId;
     private final String[] connectorIds;
     private final Random random = new Random();
@@ -43,7 +43,11 @@ public class EVChargingStation {
     private static final SecureRandom secureRandom = new SecureRandom();
     public static DateTimeFormatter FORMATER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
 
-    public EVChargingStation(String locationId, String[] connectorIds) {
+    public EVChargingStation(String locationId, String[] connectorIds, int MAXIMUM_PLAN,int HIGH_PLAN,int MEDIUM_PLAN,int LOW_PLAN) {
+        this.MAXIMUM_PLAN=MAXIMUM_PLAN;
+        this.HIGH_PLAN = HIGH_PLAN;
+        this.MEDIUM_PLAN =MEDIUM_PLAN;
+        this.LOW_PLAN = LOW_PLAN;
         this.connectorIds = connectorIds;
         this.locationId = locationId;
     }
@@ -126,10 +130,10 @@ public class EVChargingStation {
             } else if (eventCategory.equals("DEGRADATION")) {
                 getEvents().add(new Event(startTime.format(FORMATER), EventType.DOWNGRADE_EVENT_PREDICTIVE, locationId, "", "", 0));
                 for (ChargingSession s : currentSessions) {
-                    if (s.getPowerLevel() == HIGH) {
-                        // s.changePowerLevel(startTime, MEDIUM);
+                    //if (s.getPowerLevel() == HIGH_PLAN) {
+                         s.changePowerLevel(startTime, MEDIUM_PLAN);
                         //System.out.println("Predictive DOWNGRADE Event generated !!!");                       
-                    }
+                    //}
                 }
 
             }
@@ -140,20 +144,20 @@ public class EVChargingStation {
 
     private int assignPowerLevels(List<ChargingSession> currentSessions, LocalDateTime startTime) {
         double totalPower = currentSessions.stream().mapToDouble(ChargingSession::getPowerLevel).sum();
-        if (totalPower + HIGH <= MAXIMUM_POWER) {
-            //System.out.println("HIGH totalPower:" + totalPower);
-            return HIGH;
-        } else if (totalPower + MEDIUM <= MAXIMUM_POWER) {
-            //System.out.println("MEDIUM totalPower:" + totalPower);
-            return MEDIUM;
-        } else if (totalPower + LOW <= MAXIMUM_POWER) {
-            //System.out.println("LOW totalPower:" + totalPower);
-            return LOW;
+        if (totalPower + HIGH_PLAN <= MAXIMUM_PLAN) {
+            //System.out.println("HIGH_PLAN totalPower:" + totalPower);
+            return HIGH_PLAN;
+        } else if (totalPower + MEDIUM_PLAN <= MAXIMUM_PLAN) {
+            //System.out.println("MEDIUM_PLAN totalPower:" + totalPower);
+            return MEDIUM_PLAN;
+        } else if (totalPower + LOW_PLAN <= MAXIMUM_PLAN) {
+            //System.out.println("LOW_PLAN totalPower:" + totalPower);
+            return LOW_PLAN;
         } else {// try to downgrade
             for (ChargingSession s : currentSessions) {
-                if (s.getPowerLevel() == HIGH) {
-                    getEvents().add(new Event(startTime.format(FORMATER), EventType.DOWNGRADE_EVENT, locationId, s.getSessionId(), s.getConnectorId(), MEDIUM));
-                    s.changePowerLevel(startTime, MEDIUM);
+                if (s.getPowerLevel() == HIGH_PLAN) {
+                    getEvents().add(new Event(startTime.format(FORMATER), EventType.DOWNGRADE_EVENT, locationId, s.getSessionId(), s.getConnectorId(), MEDIUM_PLAN));
+                    s.changePowerLevel(startTime, MEDIUM_PLAN);
                     //System.out.println("DOWNGRADE Event generated !!!");
                     return assignPowerLevels(currentSessions, startTime);
                 }
@@ -221,7 +225,7 @@ public class EVChargingStation {
     public static void main(String[] args) {
         String stationId = UUID.randomUUID().toString();
         String[] connectorIds = {"C1", "C2", "C3", "C4"};
-        EVChargingStation station = new EVChargingStation(stationId, connectorIds);
+        EVChargingStation station = new EVChargingStation(stationId, connectorIds,16,6,4,2);
         //
         LocalDateTime T1 = LocalDateTime.parse("2025-01-01T00:00:00.000", FORMATER);
         LocalDateTime T2 = LocalDateTime.parse("2025-03-31T00:00:00.000", FORMATER);
