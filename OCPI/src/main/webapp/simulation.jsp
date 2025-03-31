@@ -2,7 +2,7 @@
     Document   : simulation
     Created on : Mar 16, 2025, 8:12:45 PM
     Author     : nsofias
-http://34.136.104.208:8080/OCPI_2/simulation.jsp?MAXIMUM_PLAN=10&HIGH_PLAN=6&MEDIUM_PLAN=4&LOW_PLAN=2
+http://34.136.104.208:8080/OCPI_2/simulation.jsp?MAXIMUM_PLAN=16&HIGH_PLAN=6&MEDIUM_PLAN=4&LOW_PLAN=2
 --%> 
 <%@page import="org.bson.conversions.Bson"%>
 <%@page import="model.Location"%>

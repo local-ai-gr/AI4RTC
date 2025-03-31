@@ -144,7 +144,7 @@
                 <%if (location != null && !location.isEmpty()) {%> 
             <iframe src="gantt_chart_for_sessions.jsp?location=<%=location%>&timeFrom=<%=timeFrom%>&timeTo=<%=timeTo%>" ></iframe> 
             <iframe src="time_charts_for_sessions_1.jsp?type=erlangs&tittle=Utilization&location=<%=location%>&timeFrom=<%=timeFrom%>&timeTo=<%=timeTo%>"></iframe>     
-            <iframe src="time_charts_for_sessions_1.jsp?type=kwh&location=<%=location%>&timeFrom=<%=timeFrom%>&timeTo=<%=timeTo%>"></iframe>
+            <iframe src="time_charts_for_sessions_1.jsp?type=power&location=<%=location%>&timeFrom=<%=timeFrom%>&timeTo=<%=timeTo%>"></iframe>
                 <%}%>
         </div>
     </body>

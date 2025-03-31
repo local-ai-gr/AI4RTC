@@ -85,35 +85,6 @@ public class Location {
         return desc.toString();
     }
 
-    /*
-    public double getErlangs(Mongo myMongo, TimeStamp1 periodStartT, TimeStamp1 periodStopT) {
-        Counters myCounters = new Counters();
-        String period_start = periodStartT.getNowUnformated_elegant();
-        String period_stop = periodStopT.getNowUnformated_elegant();
-        Collection<Session> sessions = myMongo.find("sessions",
-                Filters.and(
-                        Filters.exists("end_date_time", true),
-                        Filters.eq("location_id", this.getId()),
-                        Filters.or(Filters.and(Filters.lte("start_date_time", period_start), Filters.gte("end_date_time", period_start)), // ss{ss }
-                                Filters.and(Filters.lte("start_date_time", period_stop), Filters.gte("end_date_time", period_stop)),//         { ss}ss
-                                Filters.and(Filters.gte("start_date_time", period_start), Filters.lte("end_date_time", period_stop)) //        { ss }
-                        )), false,
-                Session.class);
-        sessions.forEach(s -> {
-            //System.out.println("sesion found=" + s.getId());
-            TimeStamp1 session_start_T;
-            try {
-                session_start_T = TimeStamp1.fromUnformated_elegant(s.getStart_date_time());
-                TimeStamp1 session_stop_T = TimeStamp1.fromUnformated_elegant(s.getEnd_date_time());
-                TimeStamp1 uStart = periodStartT.isAfter(session_start_T) ? periodStartT : session_start_T;
-                TimeStamp1 uStop = periodStopT.isBefore(session_stop_T) ? periodStopT : session_stop_T;
-                myCounters.updateCounters("-", uStop.hoursDiff(uStart));
-            } catch (Exception ex) {
-                Logger.getLogger(Location.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        });
-        return myCounters.getTotalValue();
-    }*/
     public double getErlangs(Collection<Session> sessions, TimeStamp1 periodStartT, TimeStamp1 periodStopT) {
         Counters myCounters = new Counters();
         String period_start = periodStartT.getNowUnformated_elegant();
@@ -131,14 +102,17 @@ public class Location {
                         TimeStamp1 session_stop_T = TimeStamp1.fromUnformated_elegant(s.getEnd_date_time());
                         TimeStamp1 uStart = periodStartT.isAfter(session_start_T) ? periodStartT : session_start_T;
                         TimeStamp1 uStop = periodStopT.isBefore(session_stop_T) ? periodStopT : session_stop_T;
-                        myCounters.updateCounters("-", uStop.hoursDiff(uStart));
-                        //System.out.println("getErlangsPerHour:res:updateCounters=" + uStop.hoursDiff(uStart));
+                        double h = uStop.hoursDiff(uStart);
+                        myCounters.updateCounters("H", h);
+                        if (h > 1) {
+                            System.out.println("getErlangsPerHour:res:updateCounters=" + h);
+                        }
                     } catch (Exception ex) {
                         Logger.getLogger(Location.class.getName()).log(Level.SEVERE, null, ex);
                         System.out.println("getErlangsPerHour:res:updateCounters error:" + ex);
                     }
                 });
-        return myCounters.getTotalValue();
+        return myCounters.getValue("H");
     }
 
     public double getKWH(Mongo myMongo, TimeStamp1 periodStartT, TimeStamp1 periodStopT) {
@@ -180,7 +154,7 @@ public class Location {
                 double res = getErlangs(sessions, snapshot, period_stop);
                 //System.out.println("getErlangsPerHour:res:" + res);
                 if (res > 0) {
-                    myCounters.updateCounters(snapshot.getNowUnformated_elegant().substring(0,13), res);
+                    myCounters.updateCounters(snapshot.getNowUnformated_elegant().substring(0, 13), res);
                 }
             }
         } catch (Exception e) {

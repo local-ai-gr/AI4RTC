@@ -13,10 +13,13 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import static java.util.stream.Collectors.toList;
 import main.GanntObj;
 import model.Location;
 import model.Session;
@@ -28,6 +31,8 @@ import simulation.EVChargingStation;
 import static simulation.EVChargingStation.FORMATER;
 import simulation.Event;
 import simulation.EventType;
+import static simulation.EventType.START_CHARGING_PERIOD_EVENT;
+import static simulation.EventType.STOP_CHARGING_PERIOD_EVENT;
 
 /**
  *
@@ -137,9 +142,66 @@ public class sessionsGanntServlet extends HttpServlet {
 
                             }
                         });
-
                 out.println(new Gson().toJson(ganntList));
-                //----------------------------------
+                //------------ power ----------------------
+            } else if (type.equals("power")) {
+                System.out.println("power:type=" + type);
+                List<GanntObj> ganntList = new ArrayList<>();
+                List<Event> chargingPeriodvents = new ArrayList<>();
+                sessions.stream().
+                        filter(s -> s.getEnd_date_time() != null && s.getStart_date_time() != null)
+                        .forEach(s -> {
+                            s.getCharging_periods().stream().
+                                    forEach(period -> {
+                                        try {
+                                            Location myLocation = locations.stream().filter(l -> l.getId().equals(s.getLocation_id())).findAny().orElse(null);
+                                            if (myLocation != null) {
+                                                double power = period.getChargingPeriodPower();
+                                                String period_start_date_time = period.getStart_date_time();
+                                                String period_end_date_time = period.getEnd_date_time();
+                                                chargingPeriodvents.add(new Event(period_start_date_time, START_CHARGING_PERIOD_EVENT, "", "", "", power));
+                                                chargingPeriodvents.add(new Event(period_end_date_time, STOP_CHARGING_PERIOD_EVENT, "", "", "", power));
+                                            }
+                                        } catch (Exception ex) {
+                                            ex.printStackTrace();
+                                        }
+
+                                    });
+                        });
+                //-----------
+                List<Event> chargingPeriodventsSorted = chargingPeriodvents.stream().sorted(Comparator.comparing((Event e) -> e.getEventTime())).collect(toList());
+                System.out.println("power:chargingPeriodventsSorted.size()=" + chargingPeriodventsSorted.size());
+                double totalPower = 0;
+                Map<String, Double> powerStamps = new HashMap<>();
+                for (Event myEvent : chargingPeriodventsSorted) {
+                    if (myEvent.getEventType() == EventType.START_CHARGING_PERIOD_EVENT) {
+                        totalPower += myEvent.getPowerValue();
+                    } else if (myEvent.getEventType() == EventType.STOP_CHARGING_PERIOD_EVENT) {
+                        totalPower -= myEvent.getPowerValue();
+                    }
+                    powerStamps.put(myEvent.getEventTime(), totalPower);
+                    System.out.println("power:powerStamps.put=" + myEvent.getEventTime() + " " + totalPower);
+                }
+                String previousT = "";
+                double previousP = 0;
+                System.out.println("power:powerStamps.size()= " + powerStamps.size());
+                List<String> powerStampsList = new ArrayList(powerStamps.keySet());
+                powerStampsList.sort(Comparator.naturalOrder());
+                for (String currentT : powerStampsList) {
+                    double currentV = powerStamps.get(currentT);
+                    System.out.println("power:currentV=" + currentV);
+                    if (currentV != previousP) {
+                        try {
+                            ganntList.add(new GanntObj(1, "", previousT, currentT, "POWER", null, previousP));
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        System.out.println("power:GanntObj added");
+                        previousT = currentT;
+                        previousP = currentV;
+                    }
+                }
+                out.println(new Gson().toJson(ganntList));
             } else if (type.equals("erlangs")) {
                 List<GanntObj> ganntList = new ArrayList<>();
                 System.out.println("\n\n--- erlaqngs ---");
@@ -165,7 +227,7 @@ public class sessionsGanntServlet extends HttpServlet {
                         Logger.getLogger(sessionsGanntServlet.class.getName()).log(Level.SEVERE, null, ex);
                     }
                 });
-                long id = 1;
+                id = 1;
                 for (GanntObj ho : ganntList) {
                     ho.setId(id++);
                 }
@@ -195,7 +257,7 @@ public class sessionsGanntServlet extends HttpServlet {
                         Logger.getLogger(sessionsGanntServlet.class.getName()).log(Level.SEVERE, null, ex);
                     }
                 });
-                long id = 1;
+                id = 1;
                 for (GanntObj ho : ganntList) {
                     ho.setId(id++);
                 }
