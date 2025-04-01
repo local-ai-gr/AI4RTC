@@ -1,15 +1,15 @@
 package simulation;
 
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import static java.time.temporal.ChronoUnit.SECONDS;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -17,10 +17,14 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import model.ChargingPeriod;
+import model.Location;
+import model.Session;
+import nsofiasLib.utils.Counters;
 import static simulation.EventType.DOWNGRADE_EVENT_PREDICTIVE;
 import static simulation.EventType.START_SESSION_EVENT;
 
@@ -92,7 +96,7 @@ public class EVChargingStation {
         }
         Set<LocalDateTime> predictiveDegradations = generateTimesForDegradations(day, erlangsPerHour);
         System.out.println("predictiveDegradations:" + predictiveDegradations.size());
-        predictiveDegradations.forEach(e -> primaryEvents.add(new Event(generateRandomStartTime(day).format(FORMATER), EventType.DOWNGRADE_EVENT_PREDICTIVE, "", "", "", 0)));
+        predictiveDegradations.forEach(deg -> primaryEvents.add(new Event(deg.format(FORMATER), EventType.DOWNGRADE_EVENT_PREDICTIVE, "", "", "", 0)));
         primaryEvents.stream().sorted(Comparator.comparing(e -> e.getEventTime())).forEach(e -> {
             LocalDateTime startTime = LocalDateTime.parse(e.getEventTime(), FORMATER);
             System.out.println("startTime:" + startTime + " eventCategory:" + e.getEventType());
@@ -179,8 +183,13 @@ public class EVChargingStation {
 
     public static Set<LocalDateTime> generateTimesForDegradations(LocalDateTime day, Map<String, Double> erlangsPerHour) {
         //DateTimeFormatter myFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH");
-        System.out.println("erlangsPerHour:+" + erlangsPerHour.size());
-        return erlangsPerHour.entrySet().stream().filter((Entry<String, Double> e) -> e.getValue() > 3).map((Entry<String, Double> e) -> LocalDateTime.parse(e.getKey())).collect(toSet());
+                    System.out.println("<b>erlangsPerHour.size()====" + erlangsPerHour.size() + "</b>");
+            erlangsPerHour.forEach((String k, Double v)->System.out.println("<p>"+k+" "+v) );
+        return erlangsPerHour.entrySet().stream()
+                .filter((Entry<String, Double> e) -> e.getValue()==1.0)
+                .map((Entry<String, Double> e) -> LocalDateTime.parse(e.getKey()))
+                
+                .collect(toSet());
     }
 
     /**
@@ -202,6 +211,55 @@ public class EVChargingStation {
      */
     public String getLocationId() {
         return locationId;
+    }
+
+    public static double getUtilization(Collection<Session> sessions, LocalDateTime periodStartT, LocalDateTime periodStopT, int numberOfConnectors) {
+        Counters myCounters = new Counters();
+        String period_start = periodStartT.format(FORMATER);
+        String period_stop = periodStopT.format(FORMATER);
+        sessions.stream()
+                .filter(s -> s.getEnd_date_time() != null)
+                .filter(s -> (s.getStart_date_time().compareTo(period_start) < 0 && s.getEnd_date_time().compareTo(period_start) > 0)
+                || (s.getStart_date_time().compareTo(period_stop) < 0 && s.getEnd_date_time().compareTo(period_stop) > 0)
+                || (s.getStart_date_time().compareTo(period_start) > 0 && s.getEnd_date_time().compareTo(period_stop) < 0))
+                .forEach(s -> {
+                    //System.out.println("getUtilizationPerHour:res:sesion found=" + s.getId());
+                    //LocalDateTime session_start_T;
+                    try {
+                        LocalDateTime session_start_T = LocalDateTime.parse(s.getStart_date_time(), FORMATER);
+                        LocalDateTime session_stop_T = LocalDateTime.parse(s.getEnd_date_time(), FORMATER);
+                        LocalDateTime uStart = periodStartT.isAfter(session_start_T) ? periodStartT : session_start_T;
+                        LocalDateTime uStop = periodStopT.isBefore(session_stop_T) ? periodStopT : session_stop_T;
+                        Duration duration = Duration.between(uStart, uStop);
+                        double h = duration.toSeconds() / 3600.0;
+                        myCounters.updateCounters("H", h);
+                        if (h > 1) {
+                            System.out.println("getErlangsPerHour:res:updateCounters=" + h);
+                        }
+                        //System.out.println("getUtilizationPerHour:res:updateCounters***=" + myCounters.getValue("H"));                        
+                    } catch (Exception ex) {
+                        Logger.getLogger(Location.class.getName()).log(Level.SEVERE, null, ex);
+                        System.out.println("getErlangsPerHour:res:updateCounters error:" + ex);
+                    }
+                });
+        return myCounters.getValue("H")/numberOfConnectors;
+    }
+
+    public static Map<String, Double> getUtilizationPerHour(Collection<Session> sessions, LocalDateTime periodStartT, LocalDateTime periodStopT, int numberOfConnectors) {
+        Counters myCounters = new Counters();
+        try {
+            for (LocalDateTime snapshot = periodStartT.toLocalDate().atStartOfDay(); snapshot.isBefore(periodStopT); snapshot = snapshot.plusHours(1)) {
+                LocalDateTime period_stop = snapshot.plusHours(1);
+                double res = getUtilization(sessions, snapshot, period_stop, numberOfConnectors);
+                System.out.println("getUtilizationPerHour:res:" + res+" numberOfConnectors="+numberOfConnectors);
+                if (res > 0) {
+                    myCounters.updateCounters(snapshot.format(FORMATER), res);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return myCounters.getValuesMap();
     }
 
     public static void main(String[] args) {

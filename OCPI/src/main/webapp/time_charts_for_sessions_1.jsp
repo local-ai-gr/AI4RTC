@@ -24,10 +24,13 @@
     String title = "", yTitle = "";
     if (type.equals("erlangs")) {
         title = "Utilization";
-        yTitle = "Charging hours";
+        yTitle = "Utilization %";
     } else if (type.equals("kwh")) {
         title = "Energy consumption";
         yTitle = "kWh";
+    }else if (type.equals("power")) {
+        title = "Power";
+        yTitle = "kW";
     }
 
     String params = location != null ? "?type=" + type + "&location=" + location : "?type=" + type;

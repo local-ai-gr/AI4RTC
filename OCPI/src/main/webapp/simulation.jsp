@@ -4,6 +4,7 @@
     Author     : nsofias
 http://34.136.104.208:8080/OCPI_2/simulation.jsp?MAXIMUM_PLAN=16&HIGH_PLAN=6&MEDIUM_PLAN=4&LOW_PLAN=2
 --%> 
+<%@page import="simulation.EVChargingStation"%>
 <%@page import="java.util.Collection"%>
 <%@page import="org.bson.conversions.Bson"%>
 <%@page import="model.Location"%>
@@ -67,8 +68,8 @@ http://34.136.104.208:8080/OCPI_2/simulation.jsp?MAXIMUM_PLAN=16&HIGH_PLAN=6&MED
             // --- 
             String mongoURL = Parameters.loadStringValue(System.getenv("APPLICATIONS_PATH") + "/OCPI/conf/parameters.properties", "mongoURL", "UTF8", "mongodb://nsofias:#1Vasilokori@mongo:27017");
             Mongo myMongo = new Mongo(mongoURL, "OCPI");
-            Bson myLocationFilter = (locationId != null && !locationId.isEmpty()) ? Filters.eq("id", locationId) : new Document();
-            List<Location> myLocations = myMongo.find("locations", myLocationFilter, false, Location.class);
+            //Bson myLocationFilter = (locationId != null && !locationId.isEmpty()) ? Filters.eq("id", locationId) : new Document();
+            //List<Location> myLocations = myMongo.find("locations", myLocationFilter, false, Location.class);
             //-------------            
             out.println("<h1>" + locationId + "</h1>");
             String[] connectorIds = {"C1", "C2", "C3", "C4"};
@@ -83,13 +84,14 @@ http://34.136.104.208:8080/OCPI_2/simulation.jsp?MAXIMUM_PLAN=16&HIGH_PLAN=6&MED
             Bson filter = Filters.and(locationFilter, timeFilter);
             Collection<Session> sessions = myMongo.find("sessions", filter, true, Session.class);
             
-            Map<String, Double> erlangsPerHour = Location.getErlangsPerHour(sessions, new TimeStamp1(T1).toLocalDateTime(), new TimeStamp1(T2).toLocalDateTime());
+            Map<String, Double> erlangsPerHour = EVChargingStation.getUtilizationPerHour(sessions, new TimeStamp1(T1).toLocalDateTime(), new TimeStamp1(T2).toLocalDateTime(),connectorIds.length);
             out.println("<b>erlangsPerHour.size()====" + erlangsPerHour.size() + "</b>");
+            //erlangsPerHour.forEach((String k, Double v)->System.out.println("<p>"+k+" "+v) );
             myMongo.dropCollection("sessions");
             myMongo.dropCollection("events");
             station.simulate_period(T1, T2, erlangsPerHour);
             //-------------- save sessions ----------------------------     
-
+ 
             out.println("<h1>sessions</h1>");
             station.getSessions()
                     .forEach(chs -> {

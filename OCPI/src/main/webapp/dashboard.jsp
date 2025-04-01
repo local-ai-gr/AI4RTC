@@ -29,7 +29,7 @@
     String timeFrom = request.getParameter("timeFrom");
     if (timeFrom == null) {
         TimeStamp1 timeFromT = new TimeStamp1();
-        timeFromT.addDays(-7);
+        timeFromT.addDays(-10);
         timeFrom = timeFromT.getNowUnformated_elegant().substring(0, 19).replaceAll("-", "/").replaceAll("T", " ");
     }
     String timeTo = request.getParameter("timeTo");
@@ -140,11 +140,11 @@
         </form>  
 
         <div class="iframe-grid">
-            <iframe src="map.jsp?location=<%=location%>"></iframe>
+            <iframe src="map.jsp?location=<%=location%>" style="width: 100%; height: 50vh;"></iframe>
                 <%if (location != null && !location.isEmpty()) {%> 
-            <iframe src="gantt_chart_for_sessions.jsp?location=<%=location%>&timeFrom=<%=timeFrom%>&timeTo=<%=timeTo%>" ></iframe> 
-            <iframe src="time_charts_for_sessions_1.jsp?type=erlangs&tittle=Utilization&location=<%=location%>&timeFrom=<%=timeFrom%>&timeTo=<%=timeTo%>"></iframe>     
-            <iframe src="time_charts_for_sessions_1.jsp?type=power&location=<%=location%>&timeFrom=<%=timeFrom%>&timeTo=<%=timeTo%>"></iframe>
+            <iframe src="gantt_chart_for_sessions.jsp?location=<%=location%>&timeFrom=<%=timeFrom%>&timeTo=<%=timeTo%>" style="width: 100%; height: 50vh;">></iframe> 
+            <iframe src="time_charts_for_sessions_1.jsp?type=erlangs&tittle=Utilization&location=<%=location%>&timeFrom=<%=timeFrom%>&timeTo=<%=timeTo%>" style="width: 100%; height: 50vh;"></iframe>     
+            <iframe src="time_charts_for_sessions_1.jsp?type=power&location=<%=location%>&timeFrom=<%=timeFrom%>&timeTo=<%=timeTo%>" style="width: 100%; height: 50vh;"></iframe>
                 <%}%>
         </div>
     </body>

@@ -32,6 +32,7 @@ import simulation.Event;
 import simulation.EventType;
 import static simulation.EventType.START_CHARGING_PERIOD_EVENT;
 import static simulation.EventType.STOP_CHARGING_PERIOD_EVENT;
+import static simulation.EVChargingStation.getUtilizationPerHour;
 
 /**
  *
@@ -195,26 +196,29 @@ public class sessionsGanntServlet extends HttpServlet {
                 //------------------------ erlangs --------------------------------------------
             } else if (type.equals("erlangs")) {
                 List<GanntObj> ganntList = new ArrayList<>();
-                System.out.println("\n\n--- erlaqngs ---");
+                System.out.println("\n\n--- Utilization ---");
+                Location myLocation = locations.stream().filter(l -> l.getId().equals(location)).findAny().orElse(null);
 
-                try {
-                    Map<String, Double> erlangsPerHour = Location.getErlangsPerHour(sessions, T1, T2);
-                    erlangsPerHour.forEach((k, v) -> {
-                        try {
-                            LocalDateTime start = LocalDateTime.parse(k, FORMATER);
-                            LocalDateTime stop = start.plusHours(1);
-                            ganntList.add(new GanntObj(1, "", start.format(FORMATER), stop.format(FORMATER), "", null, v));
-                        } catch (Exception ex) {
-                            Logger.getLogger(sessionsGanntServlet.class.getName()).log(Level.SEVERE, null, ex);
-                        }
-                    });
-                } catch (Exception ex) {
-                    Logger.getLogger(sessionsGanntServlet.class.getName()).log(Level.SEVERE, null, ex);
-                }
+                if (myLocation != null) {
+                    try {
+                        Map<String, Double> erlangsPerHour = getUtilizationPerHour(sessions, T1, T2, 4);
+                        erlangsPerHour.forEach((k, v) -> {
+                            try {
+                                LocalDateTime start = LocalDateTime.parse(k, FORMATER);
+                                LocalDateTime stop = start.plusHours(1);
+                                ganntList.add(new GanntObj(1, "", start.format(FORMATER), stop.format(FORMATER), "", null, v));
+                            } catch (Exception ex) {
+                                Logger.getLogger(sessionsGanntServlet.class.getName()).log(Level.SEVERE, null, ex);
+                            }
+                        });
+                    } catch (Exception ex) {
+                        Logger.getLogger(sessionsGanntServlet.class.getName()).log(Level.SEVERE, null, ex);
+                    }
 
-                id = 1;
-                for (GanntObj ho : ganntList) {
-                    ho.setId(id++);
+                    id = 1;
+                    for (GanntObj ho : ganntList) {
+                        ho.setId(id++);
+                    }
                 }
                 out.println(new Gson().toJson(ganntList));
                 //-------------- kwh --------------------

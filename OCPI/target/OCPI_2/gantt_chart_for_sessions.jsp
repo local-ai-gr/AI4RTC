@@ -74,6 +74,7 @@
 
                     var options = {
                         width: '100%',
+                        height: '85%',
                         min: minStartTime,
                         max: maxEndTime,
                         stack: false,
