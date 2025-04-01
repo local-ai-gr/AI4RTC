@@ -5,6 +5,8 @@
 package model;
 
 import com.mongodb.client.model.Filters;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -18,6 +20,8 @@ import nsofiasLib.databases.Mongo;
 import nsofiasLib.time.TimeStamp1;
 import nsofiasLib.utils.Counters;
 import org.bson.Document;
+import org.bson.conversions.Bson;
+import static simulation.EVChargingStation.FORMATER;
 
 public class Location {
 
@@ -85,35 +89,7 @@ public class Location {
         return desc.toString();
     }
 
-    public double getErlangs(Collection<Session> sessions, TimeStamp1 periodStartT, TimeStamp1 periodStopT) {
-        Counters myCounters = new Counters();
-        String period_start = periodStartT.getNowUnformated_elegant();
-        String period_stop = periodStopT.getNowUnformated_elegant();
-        sessions.stream()
-                .filter(s -> s.getEnd_date_time() != null)
-                .filter(s -> (s.getStart_date_time().compareTo(period_start) < 0 && s.getEnd_date_time().compareTo(period_start) > 0)
-                || (s.getStart_date_time().compareTo(period_stop) < 0 && s.getEnd_date_time().compareTo(period_stop) > 0)
-                || (s.getStart_date_time().compareTo(period_start) > 0 && s.getEnd_date_time().compareTo(period_stop) < 0))
-                .forEach(s -> {
-                    //System.out.println("getErlangsPerHour:res:sesion found=" + s.getId());
-                    TimeStamp1 session_start_T;
-                    try {
-                        session_start_T = TimeStamp1.fromUnformated_elegant(s.getStart_date_time());
-                        TimeStamp1 session_stop_T = TimeStamp1.fromUnformated_elegant(s.getEnd_date_time());
-                        TimeStamp1 uStart = periodStartT.isAfter(session_start_T) ? periodStartT : session_start_T;
-                        TimeStamp1 uStop = periodStopT.isBefore(session_stop_T) ? periodStopT : session_stop_T;
-                        double h = uStop.hoursDiff(uStart);
-                        myCounters.updateCounters("H", h);
-                        if (h > 1) {
-                            System.out.println("getErlangsPerHour:res:updateCounters=" + h);
-                        }
-                    } catch (Exception ex) {
-                        Logger.getLogger(Location.class.getName()).log(Level.SEVERE, null, ex);
-                        System.out.println("getErlangsPerHour:res:updateCounters error:" + ex);
-                    }
-                });
-        return myCounters.getValue("H");
-    }
+
 
     public double getKWH(Mongo myMongo, TimeStamp1 periodStartT, TimeStamp1 periodStopT) {
         Counters myCounters = new Counters();
@@ -143,25 +119,8 @@ public class Location {
         return myCounters.getTotalValue();
     }
 
-    public Map<String, Double> getErlangsPerHour(Mongo myMongo, TimeStamp1 periodStartT, TimeStamp1 periodStopT) {
-        Counters myCounters = new Counters();
-        try {
-            Collection<Session> sessions = myMongo.find("sessions", new Document(), true, Session.class);
-            System.out.println("getErlangsPerHour:sessions.size:" + sessions.size());
-            for (TimeStamp1 snapshot = periodStartT; snapshot.isBefore(periodStopT); snapshot.addHours(1)) {
-                TimeStamp1 period_stop = new TimeStamp1(snapshot);
-                period_stop.addHours(1);
-                double res = getErlangs(sessions, snapshot, period_stop);
-                //System.out.println("getErlangsPerHour:res:" + res);
-                if (res > 0) {
-                    myCounters.updateCounters(snapshot.getNowUnformated_elegant().substring(0, 13), res);
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return myCounters.getValuesMap();
-    }
+    
+
 
     public Map<String, Double> getKWHPerHour(Mongo myMongo, TimeStamp1 periodStartT, TimeStamp1 periodStopT) {
         Counters myCounters = new Counters();
@@ -175,6 +134,54 @@ public class Location {
         }
         return myCounters.getValuesMap();
     }
+    
+    public static double getErlangs(Collection<Session> sessions, LocalDateTime periodStartT, LocalDateTime periodStopT) {
+        Counters myCounters = new Counters();
+        String period_start = periodStartT.format(FORMATER);
+        String period_stop = periodStopT.format(FORMATER);
+        sessions.stream()
+                .filter(s -> s.getEnd_date_time() != null)
+                .filter(s -> (s.getStart_date_time().compareTo(period_start) < 0 && s.getEnd_date_time().compareTo(period_start) > 0)
+                || (s.getStart_date_time().compareTo(period_stop) < 0 && s.getEnd_date_time().compareTo(period_stop) > 0)
+                || (s.getStart_date_time().compareTo(period_start) > 0 && s.getEnd_date_time().compareTo(period_stop) < 0))
+                .forEach(s -> {
+                    //System.out.println("getErlangsPerHour:res:sesion found=" + s.getId());
+                    //LocalDateTime session_start_T;
+                    try {
+                        LocalDateTime session_start_T = LocalDateTime.parse(s.getStart_date_time(),FORMATER);
+                        LocalDateTime session_stop_T = LocalDateTime.parse(s.getEnd_date_time(),FORMATER);
+                        LocalDateTime uStart = periodStartT.isAfter(session_start_T) ? periodStartT : session_start_T;
+                        LocalDateTime uStop = periodStopT.isBefore(session_stop_T) ? periodStopT : session_stop_T;
+                        Duration duration = Duration.between(uStart, uStop);
+                        double h = duration.toSeconds() / 3600.0;
+                        myCounters.updateCounters("H", h);
+                        if (h > 1) {
+                            System.out.println("getErlangsPerHour:res:updateCounters=" + h);
+                        }
+                        //System.out.println("getErlangsPerHour:res:updateCounters***=" + myCounters.getValue("H"));                        
+                    } catch (Exception ex) {
+                        Logger.getLogger(Location.class.getName()).log(Level.SEVERE, null, ex);
+                        System.out.println("getErlangsPerHour:res:updateCounters error:" + ex);
+                    }
+                });
+        return myCounters.getValue("H");
+    }    
+    public static Map<String, Double> getErlangsPerHour(Collection<Session> sessions, LocalDateTime periodStartT, LocalDateTime periodStopT) {
+        Counters myCounters = new Counters();
+        try {
+            for (LocalDateTime snapshot = periodStartT.toLocalDate().atStartOfDay(); snapshot.isBefore(periodStopT); snapshot=snapshot.plusHours(1)) {
+                LocalDateTime period_stop =snapshot.plusHours(1);
+                double res = getErlangs(sessions, snapshot, period_stop);
+                //System.out.println("getErlangsPerHour:res:" + res);
+                if (res > 0) {
+                    myCounters.updateCounters(snapshot.format(FORMATER), res);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return myCounters.getValuesMap();
+    }    
 //=========================================================
 
     /**

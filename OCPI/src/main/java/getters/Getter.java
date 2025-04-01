@@ -93,27 +93,7 @@ public class Getter {
             });
         } catch (Exception e) {
             e.printStackTrace(System.out);
-        }
-        //----------
-        if (true)            
-        try {
-            String t1 = "20240519T000000";
-            String t2 = "20241030T000000";
-            System.out.println("\n\n--- erlaqngs ---");
-            Mongo myMongo = new Mongo("mongodb://localhost:27017", "OCPI");
-            Location myLocation = new LocationsGetter().get("GR-EMU-S6792111181543869683893493-L");
-           // double erlangs = myLocation.getErlangs(myMongo, new TimeStamp1(t1), new TimeStamp1(t2));
-            //System.out.println("erlangs=" + erlangs);
-            Map<String, Double> erlangsPerHour = myLocation.getErlangsPerHour(myMongo, new TimeStamp1(t1), new TimeStamp1(t2));
-            erlangsPerHour.forEach((k, v) -> System.out.println("erlangs=" + k + " " + v));
-            //
-            double kwh = myLocation.getKWH(myMongo, new TimeStamp1(t1), new TimeStamp1(t2));
-            System.out.println("kwh=" + kwh);
-            Map<String, Double> kwhPerHour = myLocation.getKWHPerHour(myMongo, new TimeStamp1(t1), new TimeStamp1(t2));
-            kwhPerHour.forEach((k, v) -> System.out.println("kwh=" + k + " " + v));
-        } catch (Exception e) {
-            e.printStackTrace(System.out);
-        }
+        }        
 
     }
 }

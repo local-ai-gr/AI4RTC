@@ -4,6 +4,7 @@
     Author     : nsofias
 http://34.136.104.208:8080/OCPI_2/simulation.jsp?MAXIMUM_PLAN=16&HIGH_PLAN=6&MEDIUM_PLAN=4&LOW_PLAN=2
 --%> 
+<%@page import="java.util.Collection"%>
 <%@page import="org.bson.conversions.Bson"%>
 <%@page import="model.Location"%>
 <%@page import="com.mongodb.client.model.Filters"%>
@@ -75,7 +76,14 @@ http://34.136.104.208:8080/OCPI_2/simulation.jsp?MAXIMUM_PLAN=16&HIGH_PLAN=6&MED
             DateTimeFormatter formatter = EVChargingStation.FORMATER;
             LocalDateTime T1 = LocalDateTime.parse("2025-01-01T00:00:00.000", formatter);
             LocalDateTime T2 = LocalDateTime.parse("2025-03-31T00:00:00.000", formatter);
-            Map<String, Double> erlangsPerHour = myLocations.get(0).getErlangsPerHour(myMongo, new TimeStamp1(T1), new TimeStamp1(T2));
+            //------filtering ---------------    
+            Bson locationFilter = (locationId != null && !locationId.isEmpty()) ? Filters.eq("location_id", locationId) : new Document();
+            Bson timeFilter = Filters.and(Filters.gte("mydate", T1),
+                    Filters.lte("mydate", T2));
+            Bson filter = Filters.and(locationFilter, timeFilter);
+            Collection<Session> sessions = myMongo.find("sessions", filter, true, Session.class);
+            
+            Map<String, Double> erlangsPerHour = Location.getErlangsPerHour(sessions, new TimeStamp1(T1).toLocalDateTime(), new TimeStamp1(T2).toLocalDateTime());
             out.println("<b>erlangsPerHour.size()====" + erlangsPerHour.size() + "</b>");
             myMongo.dropCollection("sessions");
             myMongo.dropCollection("events");

@@ -14,7 +14,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -171,68 +170,54 @@ public class sessionsGanntServlet extends HttpServlet {
                 //-----------
                 List<Event> chargingPeriodventsSorted = chargingPeriodvents.stream().sorted(Comparator.comparing((Event e) -> e.getEventTime())).collect(toList());
                 System.out.println("power:chargingPeriodventsSorted.size()=" + chargingPeriodventsSorted.size());
-                double totalPower = 0;
-                Map<String, Double> powerStamps = new HashMap<>();
-                for (Event myEvent : chargingPeriodventsSorted) {
-                    if (myEvent.getEventType() == EventType.START_CHARGING_PERIOD_EVENT) {
-                        totalPower += myEvent.getPowerValue();
-                    } else if (myEvent.getEventType() == EventType.STOP_CHARGING_PERIOD_EVENT) {
-                        totalPower -= myEvent.getPowerValue();
-                    }
-                    powerStamps.put(myEvent.getEventTime(), totalPower);
-                    System.out.println("power:powerStamps.put=" + myEvent.getEventTime() + " " + totalPower);
-                }
+                double currentPower = 0;
                 String previousT = "";
                 double previousP = 0;
-                System.out.println("power:powerStamps.size()= " + powerStamps.size());
-                List<String> powerStampsList = new ArrayList(powerStamps.keySet());
-                powerStampsList.sort(Comparator.naturalOrder());
-                for (String currentT : powerStampsList) {
-                    double currentV = powerStamps.get(currentT);
-                    System.out.println("power:currentV=" + currentV);
-                    if (currentV != previousP) {
-                        try {
-                            ganntList.add(new GanntObj(1, "", previousT, currentT, "POWER", null, previousP));
-                        } catch (Exception e) {
-                            e.printStackTrace();
+                for (Event myEvent : chargingPeriodventsSorted) {
+                    try {
+                        if (myEvent.getEventType() == EventType.START_CHARGING_PERIOD_EVENT) {
+                            currentPower += myEvent.getPowerValue();
+                        } else if (myEvent.getEventType() == EventType.STOP_CHARGING_PERIOD_EVENT) {
+                            currentPower -= myEvent.getPowerValue();
                         }
-                        System.out.println("power:GanntObj added");
-                        previousT = currentT;
-                        previousP = currentV;
+                        if (!previousT.isEmpty()) {
+                            ganntList.add(new GanntObj(1, "", previousT, myEvent.getEventTime(), "POWER", null, previousP));
+                        }
+                        previousT = myEvent.getEventTime();
+                        previousP = currentPower;
+                        System.out.println("power:powerStamps.put=" + myEvent.getEventTime() + " " + currentPower);
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
                 }
+
                 out.println(new Gson().toJson(ganntList));
+                //------------------------ erlangs --------------------------------------------
             } else if (type.equals("erlangs")) {
                 List<GanntObj> ganntList = new ArrayList<>();
                 System.out.println("\n\n--- erlaqngs ---");
-                Bson myLocationFilter = (location != null && !location.isEmpty()) ? Filters.eq("id", location) : new Document();
-                List<Location> myLocations = myMongo.find("locations", myLocationFilter, false, Location.class);
-                myLocations.forEach(myLocation -> {
-                    try {
-                        //double erlangs = myLocation.getErlangs(myMongo, new TimeStamp1(t1), new TimeStamp1(t2));
-                        System.out.println("erlangs for " + myLocation.getName());
-                        Map<String, Double> erlangsPerHour = myLocation.getErlangsPerHour(myMongo, new TimeStamp1(T1), new TimeStamp1(T2));
-                        erlangsPerHour.forEach((k, v) -> {
-                            try {
-                                TimeStamp1 endTime = TimeStamp1.fromUnformated_elegant(k + ":00:00.000");
-                                endTime.addHours(1);
-                                String _endTime = endTime.getNowUnformated_elegant();
-                                //System.out.println(_endTime);
-                                ganntList.add(new GanntObj(1, "", k + ":00:00.000", _endTime, myLocation.getName(), null, v));
-                            } catch (Exception ex) {
-                                Logger.getLogger(sessionsGanntServlet.class.getName()).log(Level.SEVERE, null, ex);
-                            }
-                        });
-                    } catch (Exception ex) {
-                        Logger.getLogger(sessionsGanntServlet.class.getName()).log(Level.SEVERE, null, ex);
-                    }
-                });
+
+                try {
+                    Map<String, Double> erlangsPerHour = Location.getErlangsPerHour(sessions, T1, T2);
+                    erlangsPerHour.forEach((k, v) -> {
+                        try {
+                            LocalDateTime start = LocalDateTime.parse(k, FORMATER);
+                            LocalDateTime stop = start.plusHours(1);
+                            ganntList.add(new GanntObj(1, "", start.format(FORMATER), stop.format(FORMATER), "", null, v));
+                        } catch (Exception ex) {
+                            Logger.getLogger(sessionsGanntServlet.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                    });
+                } catch (Exception ex) {
+                    Logger.getLogger(sessionsGanntServlet.class.getName()).log(Level.SEVERE, null, ex);
+                }
+
                 id = 1;
                 for (GanntObj ho : ganntList) {
                     ho.setId(id++);
                 }
                 out.println(new Gson().toJson(ganntList));
-                //----------------------------------
+                //-------------- kwh --------------------
             } else if (type.equals("kwh")) {
                 List<GanntObj> ganntList = new ArrayList<>();
                 Bson myLocationFilter = (location != null && !location.isEmpty()) ? Filters.eq("id", location) : new Document();

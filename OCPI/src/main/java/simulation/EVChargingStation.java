@@ -12,13 +12,17 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import model.ChargingPeriod;
+import static simulation.EventType.DOWNGRADE_EVENT_PREDICTIVE;
+import static simulation.EventType.START_SESSION_EVENT;
 
 /*
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
@@ -43,10 +47,10 @@ public class EVChargingStation {
     private static final SecureRandom secureRandom = new SecureRandom();
     public static DateTimeFormatter FORMATER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
 
-    public EVChargingStation(String locationId, String[] connectorIds, int MAXIMUM_PLAN,int HIGH_PLAN,int MEDIUM_PLAN,int LOW_PLAN) {
-        this.MAXIMUM_PLAN=MAXIMUM_PLAN;
+    public EVChargingStation(String locationId, String[] connectorIds, int MAXIMUM_PLAN, int HIGH_PLAN, int MEDIUM_PLAN, int LOW_PLAN) {
+        this.MAXIMUM_PLAN = MAXIMUM_PLAN;
         this.HIGH_PLAN = HIGH_PLAN;
-        this.MEDIUM_PLAN =MEDIUM_PLAN;
+        this.MEDIUM_PLAN = MEDIUM_PLAN;
         this.LOW_PLAN = LOW_PLAN;
         this.connectorIds = connectorIds;
         this.locationId = locationId;
@@ -81,33 +85,31 @@ public class EVChargingStation {
     public void simulateDay(LocalDateTime day, Map<String, Double> erlangsPerHour) {
         LocalDateTime now = LocalDateTime.now();
         int sessionCount = 10 + random.nextInt(11);
-
-        Map<LocalDateTime, String> newEventsDateTimes = new HashMap<>();
+        List<Event> primaryEvents = new ArrayList<>();
         for (int i = 0; i < sessionCount; i++) {
-            newEventsDateTimes.put(generateRandomStartTime(day), "SESSION");
+            //newEventsDateTimes.put(generateRandomStartTime(day), "SESSION");
+            primaryEvents.add(new Event(generateRandomStartTime(day).format(FORMATER), EventType.START_SESSION_EVENT, "", "", "", 0));
         }
         Set<LocalDateTime> predictiveDegradations = generateTimesForDegradations(day, erlangsPerHour);
-        predictiveDegradations.forEach(e -> newEventsDateTimes.put(e, "DEGRADATION"));
-        Map<LocalDateTime, String> newEventsDateTimesSorted =  newEventsDateTimes.entrySet().stream().sorted((Map.Entry.comparingByKey())).collect(Collectors.toMap((Map.Entry<LocalDateTime, String> e)->e.getKey(), (Map.Entry<LocalDateTime, String>  e)->e.getValue()));
-        //---
-        newEventsDateTimesSorted.forEach((startTime, eventCategory) -> {
-            System.out.println("eventCategory:" + eventCategory);
+        System.out.println("predictiveDegradations:" + predictiveDegradations.size());
+        predictiveDegradations.forEach(e -> primaryEvents.add(new Event(generateRandomStartTime(day).format(FORMATER), EventType.DOWNGRADE_EVENT_PREDICTIVE, "", "", "", 0)));
+        primaryEvents.stream().sorted(Comparator.comparing(e -> e.getEventTime())).forEach(e -> {
+            LocalDateTime startTime = LocalDateTime.parse(e.getEventTime(), FORMATER);
+            System.out.println("startTime:" + startTime + " eventCategory:" + e.getEventType());
             List<ChargingSession> currentSessions = getSessions().stream()
-                    .filter(s -> s.getStartTime().isBefore(startTime) && s.getStopTime().isAfter(startTime))
+                    .filter(s -> (s.getStartTime().isBefore(startTime) || s.getStartTime().isBefore(startTime)) && s.getStopTime().isAfter(startTime))
                     .sorted(Comparator.comparing((ChargingSession s) -> s.getPowerLevel()).reversed()).collect(toList());
-            if (eventCategory.equals("SESSION")) {
-                //  for (LocalDateTime startTime : newEventsDateTimes) {
+            Set<String> busyConnectors = currentSessions.stream().map(s -> s.getConnectorId()).collect(toSet());
+            // --- 
+
+            if (e.getEventType() == START_SESSION_EVENT) {
                 if (startTime.isAfter(now)) {
                     return;
                 }
-                //System.out.println("new start time->"+startTime);
+                System.out.println("new start time->" + startTime);
                 int durationMinutes = 30 + random.nextInt(211);
                 LocalDateTime stopTime = startTime.plusMinutes(durationMinutes);
-
-                List<String> busyConnectors = currentSessions.stream().map(s -> s.getConnectorId()).collect(toList());
-
                 Optional<String> connectorId_ = Arrays.asList(connectorIds).stream().filter(c -> !busyConnectors.contains(c)).findFirst();
-
                 if (connectorId_.isEmpty()) {
                     //System.out.println("LOST CUSTOMER. All connectors are busy!!!");
                     getEvents().add(new Event(startTime.format(FORMATER), EventType.NOT_AVAILABLE_CONNECTOR_EVENT, locationId, "N/A", "N/A", 0));
@@ -120,25 +122,20 @@ public class EVChargingStation {
                     return;
                 }
                 String sessionId = new UUID(secureRandom.nextLong(), secureRandom.nextLong()).toString();
-
                 ChargingSession session = new ChargingSession(getLocationId(), sessionId, connectorId, startTime, stopTime, 0, assignedPower);
                 getSessions().add(session);
                 //System.out.println("new session:" + session);
                 getEvents().add(new Event(startTime.format(FORMATER), EventType.START_SESSION_EVENT, locationId, sessionId, connectorId, assignedPower));
                 getEvents().add(new Event(stopTime.format(FORMATER), EventType.STOP_SESSION_EVENT, locationId, sessionId, connectorId, 0));
-                //activeSessionsByConnector.remove(connectorId);
-            } else if (eventCategory.equals("DEGRADATION")) {
+            } else if (e.getEventType() == DOWNGRADE_EVENT_PREDICTIVE) {
+                System.out.println("getEventType:" + e.getEventType());
                 getEvents().add(new Event(startTime.format(FORMATER), EventType.DOWNGRADE_EVENT_PREDICTIVE, locationId, "", "", 0));
                 for (ChargingSession s : currentSessions) {
-                    //if (s.getPowerLevel() == HIGH_PLAN) {
-                         s.changePowerLevel(startTime, MEDIUM_PLAN);
-                        //System.out.println("Predictive DOWNGRADE Event generated !!!");                       
-                    //}
+                    s.changePowerLevel(startTime, MEDIUM_PLAN);
                 }
 
             }
         });
-        //getSessions().stream().forEach(s -> generatePowerEvents(s));
 
     }
 
@@ -181,24 +178,9 @@ public class EVChargingStation {
     }
 
     public static Set<LocalDateTime> generateTimesForDegradations(LocalDateTime day, Map<String, Double> erlangsPerHour) {
-        DateTimeFormatter myFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH");
+        //DateTimeFormatter myFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH");
         System.out.println("erlangsPerHour:+" + erlangsPerHour.size());
-        // Start at the beginning of the day
-        LocalDateTime startOfDay = day.toLocalDate().atStartOfDay();
-        Set<LocalDateTime> timeList = new HashSet<>();
-        // Loop through every minute of the day (24 hours * 60 minutes = 1440 minutes)
-        String step_ = "";
-        for (int i = 0; i < 1440; i++) {
-            LocalDateTime step = startOfDay.plusMinutes(i);
-            if (!step.format(myFormatter).equals(step_)) {
-                step_ = step.format(myFormatter);
-                if (erlangsPerHour.get(step_) != null && erlangsPerHour.get(step_) >= 4) {
-                    System.out.println("DOWNGRADE FOUND!!! at " + step.toString());
-                    timeList.add(step);
-                }
-            }
-        }
-        return timeList;
+        return erlangsPerHour.entrySet().stream().filter((Entry<String, Double> e) -> e.getValue() > 3).map((Entry<String, Double> e) -> LocalDateTime.parse(e.getKey())).collect(toSet());
     }
 
     /**
@@ -225,7 +207,7 @@ public class EVChargingStation {
     public static void main(String[] args) {
         String stationId = UUID.randomUUID().toString();
         String[] connectorIds = {"C1", "C2", "C3", "C4"};
-        EVChargingStation station = new EVChargingStation(stationId, connectorIds,16,6,4,2);
+        EVChargingStation station = new EVChargingStation(stationId, connectorIds, 16, 6, 4, 2);
         //
         LocalDateTime T1 = LocalDateTime.parse("2025-01-01T00:00:00.000", FORMATER);
         LocalDateTime T2 = LocalDateTime.parse("2025-03-31T00:00:00.000", FORMATER);
