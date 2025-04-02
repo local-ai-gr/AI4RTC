@@ -125,9 +125,10 @@ public class sessionsGanntServlet extends HttpServlet {
                 events.stream()
                         .forEach(e -> {
                             Location myLocation = locations.stream().filter(l -> l.getId().equals(e.getLocation_id())).findAny().orElse(null);
-                            LocalDateTime ldt = LocalDateTime.parse(e.getEventTime(), FORMATER);
-                            LocalDateTime ldt1 = ldt.plusSeconds(1);
-                            String eventEnd = ldt1.format(FORMATER);
+                            LocalDateTime ldtEnd = LocalDateTime.parse(e.getEventTime(), FORMATER);
+                            LocalDateTime ldtStart = ldtEnd.minusNanos(700);
+                            String eventStart = ldtStart.format(FORMATER);
+                            String eventEnd = ldtEnd.format(FORMATER);
                             String connector = e.getConnectorId();
                             String groupName = request.getParameter("location") == null ? myLocation.getName() + " " + connector : connector;
                             if (e.getEventType() == EventType.DOWNGRADE_EVENT) {
@@ -138,7 +139,7 @@ public class sessionsGanntServlet extends HttpServlet {
                                     ex.printStackTrace();
                                 }
                             } else if (e.getEventType() == EventType.DOWNGRADE_EVENT_PREDICTIVE) {
-                                ganntList.add(new GanntObj(id++, "", e.getEventTime(), eventEnd, "Predictive Downgrades", "background-color: blue; border-color: blue;", 0.0));
+                                ganntList.add(new GanntObj(id++, "", eventStart, eventEnd, "Predictive Downgrades", "background-color: blue; border-color: blue;", 0.0));
 
                             }
                         });

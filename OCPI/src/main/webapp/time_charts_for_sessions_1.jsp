@@ -108,7 +108,7 @@
         </script>
     </head>
     <body>
-        <h3><%=title%></h3>
+      
         <div id="visualization"></div>
     </body>
 </html>

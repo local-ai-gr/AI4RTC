@@ -30,25 +30,29 @@
         <meta charset="UTF-8"> 
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>SESSIONS timeline</title>
-        <link rel="stylesheet" href="js/vis-4.21/vis.min.css">
-        <script src="js/vis-4.21/vis.min.js"></script>
-        <style>
-            /* Set the height of the timeline container */
-            #timeline {
-                height: 400px;
-            }            
-        </style>
-    </head>
-    <body>            
-        <h3>Sessions timeline</h3>
-        <!--<a href="<%=sourceUrl%>">data</a> -->
-        <div id="timeline"></div>
+        <link rel="stylesheet" href="js/vis-4.21/vis.min.css">    
+    <style>
+        /* Ensure the container div takes full available space */
+        #timeline {
+            width: 100%;
+            height: 100vh; /* Use 100vh or any desired height */
+            margin: 0;
+            padding: 0;
+        }
 
+        /* Optional: prevent any overflow */
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+    </style>        
+        <script src="js/vis-4.21/vis.min.js"></script>
         <script>
             // Function to fetch event data from a remote URL
             async function fetchEventData() {
                 try {
-                    const response = await fetch('<%=sourceUrl%>');
+                            const response = await fetch('<%=sourceUrl%>');
                     if (!response.ok) {
                         throw new Error('Network response was not ok');
                     }
@@ -73,8 +77,9 @@
                     var maxEndTime = new Date(Math.max.apply(null, eventData.map(event => new Date(event.end))));
 
                     var options = {
-                        width: '100%',
-                        height: '85%',
+                        //width: '100%',
+                        //height: '80%',
+                        autoResize: true,
                         min: minStartTime,
                         max: maxEndTime,
                         stack: false,
@@ -88,9 +93,19 @@
                     console.error("No event data found");
                 }
             }
-            document.addEventListener('DOMContentLoaded', function () {
-                fetchEventData();
-            });
+
+            fetchEventData();
+
         </script>
+        <style>
+            /* Set the height of the timeline container */
+            #timeline {
+                height: 400px;
+            }
+        </style>
+    </head>
+    <body>            
+        <!--<a href="<%=sourceUrl%>">data</a> -->
+        <div id="timeline"></div>
     </body>
 </html>

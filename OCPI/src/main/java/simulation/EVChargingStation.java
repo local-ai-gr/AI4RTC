@@ -186,9 +186,8 @@ public class EVChargingStation {
                     System.out.println("<b>erlangsPerHour.size()====" + erlangsPerHour.size() + "</b>");
             erlangsPerHour.forEach((String k, Double v)->System.out.println("<p>"+k+" "+v) );
         return erlangsPerHour.entrySet().stream()
-                .filter((Entry<String, Double> e) -> e.getValue()==1.0)
-                .map((Entry<String, Double> e) -> LocalDateTime.parse(e.getKey()))
-                
+                .filter((Entry<String, Double> e) -> e.getValue()>=0.8)
+                .map((Entry<String, Double> e) -> LocalDateTime.parse(e.getKey()).minusMinutes(10))
                 .collect(toSet());
     }
 
