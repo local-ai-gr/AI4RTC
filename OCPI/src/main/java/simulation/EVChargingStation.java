@@ -101,7 +101,7 @@ public class EVChargingStation {
             LocalDateTime startTime = LocalDateTime.parse(e.getEventTime(), FORMATER);
             System.out.println("startTime:" + startTime + " eventCategory:" + e.getEventType());
             List<ChargingSession> currentSessions = getSessions().stream()
-                    .filter(s -> (s.getStartTime().isBefore(startTime) || s.getStartTime().isBefore(startTime)) && s.getStopTime().isAfter(startTime))
+                    .filter(s -> (s.getStartTime().isBefore(startTime) || s.getStartTime().isEqual(startTime)) && s.getStopTime().isAfter(startTime))
                     .sorted(Comparator.comparing((ChargingSession s) -> s.getPowerLevel()).reversed()).collect(toList());
             Set<String> busyConnectors = currentSessions.stream().map(s -> s.getConnectorId()).collect(toSet());
             // --- 
@@ -144,6 +144,19 @@ public class EVChargingStation {
     }
 
     private int assignPowerLevels(List<ChargingSession> currentSessions, LocalDateTime startTime) {
+        // ------------ CHECK FOR PROACTIVE DPWNGRADES ---------
+        boolean predictedEventFound = getEvents().stream()
+                .filter(e -> e.getEventType() == DOWNGRADE_EVENT_PREDICTIVE)
+                .anyMatch(e -> {
+                    LocalDateTime predictionTime = LocalDateTime.parse(e.getEventTime(), FORMATER);
+                    return predictionTime.isBefore(startTime) && predictionTime.plusMinutes(30).isAfter(startTime);
+                });// happened less than 30 minutes
+        //---------                
+
+        if (predictedEventFound) {
+            return MEDIUM_PLAN;
+        }
+
         double totalPower = currentSessions.stream().mapToDouble(ChargingSession::getPowerLevel).sum();
         if (totalPower + HIGH_PLAN <= MAXIMUM_PLAN) {
             //System.out.println("HIGH_PLAN totalPower:" + totalPower);
@@ -183,10 +196,10 @@ public class EVChargingStation {
 
     public static Set<LocalDateTime> generateTimesForDegradations(LocalDateTime day, Map<String, Double> erlangsPerHour) {
         //DateTimeFormatter myFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH");
-                    System.out.println("<b>erlangsPerHour.size()====" + erlangsPerHour.size() + "</b>");
-            erlangsPerHour.forEach((String k, Double v)->System.out.println("<p>"+k+" "+v) );
+        System.out.println("<b>erlangsPerHour.size()====" + erlangsPerHour.size() + "</b>");
+        erlangsPerHour.forEach((String k, Double v) -> System.out.println("<p>" + k + " " + v));
         return erlangsPerHour.entrySet().stream()
-                .filter((Entry<String, Double> e) -> e.getValue()>=0.8)
+                .filter((Entry<String, Double> e) -> e.getValue() >= 0.8)
                 .map((Entry<String, Double> e) -> LocalDateTime.parse(e.getKey()).minusMinutes(10))
                 .collect(toSet());
     }
@@ -241,7 +254,7 @@ public class EVChargingStation {
                         System.out.println("getErlangsPerHour:res:updateCounters error:" + ex);
                     }
                 });
-        return myCounters.getValue("H")/numberOfConnectors;
+        return myCounters.getValue("H") / numberOfConnectors;
     }
 
     public static Map<String, Double> getUtilizationPerHour(Collection<Session> sessions, LocalDateTime periodStartT, LocalDateTime periodStopT, int numberOfConnectors) {
@@ -250,7 +263,7 @@ public class EVChargingStation {
             for (LocalDateTime snapshot = periodStartT.toLocalDate().atStartOfDay(); snapshot.isBefore(periodStopT); snapshot = snapshot.plusHours(1)) {
                 LocalDateTime period_stop = snapshot.plusHours(1);
                 double res = getUtilization(sessions, snapshot, period_stop, numberOfConnectors);
-                System.out.println("getUtilizationPerHour:res:" + res+" numberOfConnectors="+numberOfConnectors);
+                System.out.println("getUtilizationPerHour:res:" + res + " numberOfConnectors=" + numberOfConnectors);
                 if (res > 0) {
                     myCounters.updateCounters(snapshot.format(FORMATER), res);
                 }
