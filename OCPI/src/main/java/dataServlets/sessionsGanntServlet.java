@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Random;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -33,6 +34,7 @@ import simulation.EventType;
 import static simulation.EventType.START_CHARGING_PERIOD_EVENT;
 import static simulation.EventType.STOP_CHARGING_PERIOD_EVENT;
 import static simulation.EVChargingStation.getUtilizationPerHour;
+import static simulation.EVChargingStation.predictionPeriodInMinutes;
 
 /**
  *
@@ -40,6 +42,7 @@ import static simulation.EVChargingStation.getUtilizationPerHour;
  */
 public class sessionsGanntServlet extends HttpServlet {
 
+    private final Random random = new Random();
     private static final long serialVersionUID = 1L;
     int id = 0;
 
@@ -126,20 +129,20 @@ public class sessionsGanntServlet extends HttpServlet {
                         .forEach(e -> {
                             Location myLocation = locations.stream().filter(l -> l.getId().equals(e.getLocation_id())).findAny().orElse(null);
                             LocalDateTime ldtEnd = LocalDateTime.parse(e.getEventTime(), FORMATER);
-                            LocalDateTime ldtStart = ldtEnd.minusNanos(700);
+                            LocalDateTime ldtStart = ldtEnd.minusNanos(500 + random.nextInt(200));
                             String eventStart = ldtStart.format(FORMATER);
                             String eventEnd = ldtEnd.format(FORMATER);
                             String connector = e.getConnectorId();
                             String groupName = request.getParameter("location") == null ? myLocation.getName() + " " + connector : connector;
                             if (e.getEventType() == EventType.DOWNGRADE_EVENT) {
-                                try {
-                                    ganntList.add(new GanntObj(id++, "", e.getEventTime(), eventEnd, "Downgrades", "background-color: red; border-color: red;", 0.0));
-                                    ganntList.add(new GanntObj(id++, "", e.getEventTime(), eventEnd, groupName, "background-color: red; border-color: red;", 0.0));
-                                } catch (Exception ex) {
-                                    ex.printStackTrace();
-                                }
-                            } else if (e.getEventType() == EventType.DOWNGRADE_EVENT_PREDICTIVE) {
-                                ganntList.add(new GanntObj(id++, "", eventStart, eventEnd, "Predictive Downgrades", "background-color: blue; border-color: blue;", 0.0));
+                                //ganntList.add(new GanntObj(id++, "", eventStart, eventEnd, "Downgrade actions", "background-color: red; border-color: red;", 0.0));
+                                ganntList.add(new GanntObj(id++, "", eventStart, eventEnd, groupName, "background-color: red; border-color: red;", 0.0));
+                            } else if (e.getEventType() == EventType.DOWNGRADE_EVENT1) {
+                                //ganntList.add(new GanntObj(id++, "", eventStart, eventEnd, "Downgrade actions", "background-color: red; border-color: red;", 0.0));
+                                ganntList.add(new GanntObj(id++, "", eventStart, eventEnd, groupName, "background-color: red; border-color: orange;", 0.0));
+                            }else if (e.getEventType() == EventType.DOWNGRADE_EVENT_PREDICTIVE) {
+                                int myPredictionPeriodInMinutes = predictionPeriodInMinutes + new Random().nextInt(40);
+                                ganntList.add(new GanntObj(id++, "", eventEnd, ldtEnd.plusMinutes(myPredictionPeriodInMinutes).format(FORMATER), "Predictive periods", "background-color: orange; border-color: blue;", 0.0));
 
                             }
                         });

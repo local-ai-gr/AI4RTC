@@ -50,6 +50,11 @@ public class EVChargingStation {
     //private final Map<String, ChargingSession> activeSessionsByConnector = new HashMap<>();
     private static final SecureRandom secureRandom = new SecureRandom();
     public static DateTimeFormatter FORMATER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
+    public static int predictionPeriodInMinutes = 100;
+    public static int predictionPeriodStartErlier = 40;
+
+    ;
+
 
     public EVChargingStation(String locationId, String[] connectorIds, int MAXIMUM_PLAN, int HIGH_PLAN, int MEDIUM_PLAN, int LOW_PLAN) {
         this.MAXIMUM_PLAN = MAXIMUM_PLAN;
@@ -65,7 +70,7 @@ public class EVChargingStation {
         LocalDateTime T = T1;
         while (T.isBefore(T2)) {
             System.out.println("Simulating day   " + T.format(FORMATER));
-            simulateDay(T, erlangsPerHour);
+            simulateDay(T1, 30, T, erlangsPerHour);
             T = T.plusDays(1);
         }
         // correct the null end session of the last Charging_period        
@@ -86,17 +91,22 @@ public class EVChargingStation {
         });
     }
 
-    public void simulateDay(LocalDateTime day, Map<String, Double> erlangsPerHour) {
+    public void simulateDay(LocalDateTime firstDay, int predictDay, LocalDateTime day, Map<String, Double> erlangsPerHour) {
         LocalDateTime now = LocalDateTime.now();
         int sessionCount = 10 + random.nextInt(11);
         List<Event> primaryEvents = new ArrayList<>();
+        //------ add predictiveDegradations -----
+        Set<LocalDateTime> predictiveDegradations = generateTimesForDegradations(erlangsPerHour).stream()
+                .filter(t -> firstDay.plusDays(predictDay).isBefore(t))
+                .collect(toSet());
+        System.out.println("predictiveDegradations:" + predictiveDegradations.size() + " day:" + day.format(FORMATER));
+        predictiveDegradations.forEach(deg -> primaryEvents.add(new Event(deg.format(FORMATER), EventType.DOWNGRADE_EVENT_PREDICTIVE, "", "", "", 0)));
+        //---------- add RandomStartTime session events------        
         for (int i = 0; i < sessionCount; i++) {
             //newEventsDateTimes.put(generateRandomStartTime(day), "SESSION");
             primaryEvents.add(new Event(generateRandomStartTime(day).format(FORMATER), EventType.START_SESSION_EVENT, "", "", "", 0));
         }
-        Set<LocalDateTime> predictiveDegradations = generateTimesForDegradations(day, erlangsPerHour);
-        System.out.println("predictiveDegradations:" + predictiveDegradations.size());
-        predictiveDegradations.forEach(deg -> primaryEvents.add(new Event(deg.format(FORMATER), EventType.DOWNGRADE_EVENT_PREDICTIVE, "", "", "", 0)));
+        //-------- create sessions and events -------
         primaryEvents.stream().sorted(Comparator.comparing(e -> e.getEventTime())).forEach(e -> {
             LocalDateTime startTime = LocalDateTime.parse(e.getEventTime(), FORMATER);
             System.out.println("startTime:" + startTime + " eventCategory:" + e.getEventType());
@@ -126,9 +136,14 @@ public class EVChargingStation {
                     return;
                 }
                 String sessionId = new UUID(secureRandom.nextLong(), secureRandom.nextLong()).toString();
+                if (assignedPower == -1) {// starting new session in predictive period
+                    assignedPower = MEDIUM_PLAN;
+                    getEvents().add(new Event(startTime.format(FORMATER), EventType.DOWNGRADE_EVENT1, locationId, sessionId, connectorId, assignedPower));
+                }
                 ChargingSession session = new ChargingSession(getLocationId(), sessionId, connectorId, startTime, stopTime, 0, assignedPower);
                 getSessions().add(session);
                 //System.out.println("new session:" + session);
+
                 getEvents().add(new Event(startTime.format(FORMATER), EventType.START_SESSION_EVENT, locationId, sessionId, connectorId, assignedPower));
                 getEvents().add(new Event(stopTime.format(FORMATER), EventType.STOP_SESSION_EVENT, locationId, sessionId, connectorId, 0));
             } else if (e.getEventType() == DOWNGRADE_EVENT_PREDICTIVE) {
@@ -149,12 +164,12 @@ public class EVChargingStation {
                 .filter(e -> e.getEventType() == DOWNGRADE_EVENT_PREDICTIVE)
                 .anyMatch(e -> {
                     LocalDateTime predictionTime = LocalDateTime.parse(e.getEventTime(), FORMATER);
-                    return predictionTime.isBefore(startTime) && predictionTime.plusMinutes(30).isAfter(startTime);
-                });// happened less than 30 minutes
+                    return predictionTime.isBefore(startTime) && predictionTime.plusMinutes(predictionPeriodInMinutes).isAfter(startTime);
+                });// happened less than predictionPeriodInMinutes minutes
         //---------                
 
         if (predictedEventFound) {
-            return MEDIUM_PLAN;
+            return -1;
         }
 
         double totalPower = currentSessions.stream().mapToDouble(ChargingSession::getPowerLevel).sum();
@@ -194,13 +209,16 @@ public class EVChargingStation {
         return day.with(LocalTime.of(hour, minute));
     }
 
-    public static Set<LocalDateTime> generateTimesForDegradations(LocalDateTime day, Map<String, Double> erlangsPerHour) {
+    public static Set<LocalDateTime> generateTimesForDegradations(Map<String, Double> erlangsPerHour) {
         //DateTimeFormatter myFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH");
         System.out.println("<b>erlangsPerHour.size()====" + erlangsPerHour.size() + "</b>");
         erlangsPerHour.forEach((String k, Double v) -> System.out.println("<p>" + k + " " + v));
         return erlangsPerHour.entrySet().stream()
                 .filter((Entry<String, Double> e) -> e.getValue() >= 0.8)
-                .map((Entry<String, Double> e) -> LocalDateTime.parse(e.getKey()).minusMinutes(10))
+                .map((Entry<String, Double> e) -> {
+                    int myPredictionPeriodStartErlier = 40+new Random().nextInt(40);
+                    return LocalDateTime.parse(e.getKey()).minusMinutes(myPredictionPeriodStartErlier);
+                })
                 .collect(toSet());
     }
 

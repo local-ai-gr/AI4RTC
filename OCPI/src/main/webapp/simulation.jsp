@@ -3,6 +3,9 @@
     Created on : Mar 16, 2025, 8:12:45 PM
     Author     : nsofias
 http://34.136.104.208:8080/OCPI_2/simulation.jsp?MAXIMUM_PLAN=18&HIGH_PLAN=6&MEDIUM_PLAN=4&LOW_PLAN=2
+http://34.136.104.208:8080/OCPI_2/simulation.jsp?MAXIMUM_PLAN=73&HIGH_PLAN=22&MEDIUM_PLAN=11&LOW_PLAN=7
+
+//7 11 & 22
 --%> 
 <%@page import="simulation.EVChargingStation"%>
 <%@page import="java.util.Collection"%>
@@ -109,7 +112,6 @@ http://34.136.104.208:8080/OCPI_2/simulation.jsp?MAXIMUM_PLAN=18&HIGH_PLAN=6&MED
             out.println("<h1>events</h1>");
             station.getEvents().stream()
                     .forEach(ev -> {
-
                         try {
                             myMongo.add("events", ev, LocalDateTime.parse(ev.getEventTime(), formatter));
                             out1.println("\n Added event " + new Gson().toJson(ev));
