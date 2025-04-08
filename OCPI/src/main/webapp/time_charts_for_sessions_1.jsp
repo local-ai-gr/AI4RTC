@@ -28,7 +28,7 @@
     } else if (type.equals("kwh")) {
         title = "Energy consumption";
         yTitle = "kWh";
-    }else if (type.equals("power")) {
+    } else if (type.equals("power")) {
         title = "Power";
         yTitle = "kW";
     }
@@ -72,7 +72,7 @@
                 const items = new vis.DataSet(eventData.map(event => ({
                         x: new Date(event.start), // Start time on X-axis
                         y: event.value, // Value on Y-axis (height of bars)
-                        end: new Date(event.end) // End time for intervals
+                        end: new Date(event.end) // End time for intervals      
                     })));
                 var minStartTime = new Date(Math.min.apply(null, eventData.map(event => new Date(event.start))));
                 var maxEndTime = new Date(Math.max.apply(null, eventData.map(event => new Date(event.end))));
@@ -83,7 +83,6 @@
                     min: minStartTime,
                     max: maxEndTime,
                     style: 'bar', // Sets bar style visualization
-                    barChart: {width: 50, align: 'center'}, // Width of bars
                     drawPoints: false,
                     height: '85%',
                     dataAxis: {// Y-axis configuration
@@ -108,7 +107,7 @@
         </script>
     </head>
     <body>
-      
+
         <div id="visualization"></div>
     </body>
 </html>
