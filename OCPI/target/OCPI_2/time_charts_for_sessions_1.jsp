@@ -49,12 +49,7 @@
         <link rel="stylesheet" href="https://unpkg.com/vis-timeline@latest/styles/vis-timeline-graph2d.min.css">
         <script src="https://unpkg.com/vis-timeline@latest/standalone/umd/vis-timeline-graph2d.min.js"></script>
         <style>
-            /* Rotate labels vertically */
-            .vis-time-axis .vis-text {
-                transform: rotate(-45deg); /* Rotate text */
-                transform-origin: top left;
-                white-space: nowrap;
-            }
+
         </style>
         <script>
             async function fetchEventData() {
@@ -91,10 +86,6 @@
                                 text: '<%=yTitle%>'
                             }
                         }
-                    },
-                    timeAxis: {
-                        //scale: 'day', // Time scale granularity
-                        //step: 6
                     }
                 };
 

@@ -243,7 +243,7 @@ public class EVChargingStation {
         return locationId;
     }
 
-    public static double getUtilization(Collection<Session> sessions, LocalDateTime periodStartT, LocalDateTime periodStopT, int numberOfConnectors) {
+    public static double getUtilization(Collection<Session> sessions, LocalDateTime periodStartT, LocalDateTime periodStopT, long numberOfConnectors) {
         Counters myCounters = new Counters();
         String period_start = periodStartT.format(FORMATER);
         String period_stop = periodStopT.format(FORMATER);
@@ -275,13 +275,13 @@ public class EVChargingStation {
         return myCounters.getValue("H") / numberOfConnectors;
     }
 
-    public static Map<String, Double> getUtilizationPerHour(Collection<Session> sessions, LocalDateTime periodStartT, LocalDateTime periodStopT, int numberOfConnectors) {
+    public static Map<String, Double> getUtilizationPerHour(Collection<Session> sessions, LocalDateTime periodStartT, LocalDateTime periodStopT, long numberOfConnectors) {
         Counters myCounters = new Counters();
         try {
             for (LocalDateTime snapshot = periodStartT.toLocalDate().atStartOfDay(); snapshot.isBefore(periodStopT); snapshot = snapshot.plusHours(1)) {
                 LocalDateTime period_stop = snapshot.plusHours(1);
                 double res = getUtilization(sessions, snapshot, period_stop, numberOfConnectors);
-                System.out.println("getUtilizationPerHour:res:" + res + " numberOfConnectors=" + numberOfConnectors);
+                //System.out.println("getUtilizationPerHour:res:" + res + " numberOfConnectors=" + numberOfConnectors);
                 if (res > 0) {
                     myCounters.updateCounters(snapshot.format(FORMATER), res);
                 }

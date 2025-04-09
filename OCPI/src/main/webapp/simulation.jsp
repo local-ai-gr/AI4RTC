@@ -4,9 +4,11 @@
     Author     : nsofias
 http://34.136.104.208:8080/OCPI_2/simulation.jsp?MAXIMUM_PLAN=18&HIGH_PLAN=6&MEDIUM_PLAN=4&LOW_PLAN=2
 http://34.136.104.208:8080/OCPI_2/simulation.jsp?MAXIMUM_PLAN=73&HIGH_PLAN=22&MEDIUM_PLAN=11&LOW_PLAN=7
+http://34.136.104.208:8080/OCPI_2/simulation.jsp?locationId=GR-EMU-S4875457728279981905577094-L&MAXIMUM_PLAN=73&HIGH_PLAN=22&MEDIUM_PLAN=11&LOW_PLAN=7
 
 //7 11 & 22
 --%> 
+<%@page import="java.util.Arrays"%>
 <%@page import="simulation.EVChargingStation"%>
 <%@page import="java.util.Collection"%>
 <%@page import="org.bson.conversions.Bson"%>
@@ -42,6 +44,8 @@ http://34.136.104.208:8080/OCPI_2/simulation.jsp?MAXIMUM_PLAN=73&HIGH_PLAN=22&ME
             int HIGH_PLAN = 6;
             int MEDIUM_PLAN = 4;
             int LOW_PLAN = 2;
+            int numberOfConnectors = 4;
+            
             if (request.getParameter("locationId") != null)
             try {
                 locationId = request.getParameter("locationId");
@@ -67,7 +71,17 @@ http://34.136.104.208:8080/OCPI_2/simulation.jsp?MAXIMUM_PLAN=73&HIGH_PLAN=22&ME
                 LOW_PLAN = Integer.parseInt(request.getParameter("LOW_PLAN"));
             } catch (Exception e) {
             }
-            out.println(locationId + " MAXIMUM_PLAN:" + MAXIMUM_PLAN + " HIGH_PLAN:" + HIGH_PLAN + " MEDIUM_PLAN:" + MEDIUM_PLAN + " LOW_PLAN:" + LOW_PLAN);
+            if (request.getParameter("numberOfConnectors") != null)            
+            try {
+                numberOfConnectors = Integer.parseInt(request.getParameter("numberOfConnectors"));
+            } catch (Exception e) {
+            }
+            //-------------
+            String[] connectorIds = new String[numberOfConnectors];
+            for (int i = 0; i < numberOfConnectors; i++) {
+                connectorIds[i] = "C" + String.valueOf(i+1);
+            }
+            out.println(locationId + " MAXIMUM_PLAN:" + MAXIMUM_PLAN + " HIGH_PLAN:" + HIGH_PLAN + " MEDIUM_PLAN:" + MEDIUM_PLAN + " LOW_PLAN:" + LOW_PLAN + " connectors:" + Arrays.asList(connectorIds));
             // --- 
             String mongoURL = Parameters.loadStringValue(System.getenv("APPLICATIONS_PATH") + "/OCPI/conf/parameters.properties", "mongoURL", "UTF8", "mongodb://nsofias:#1Vasilokori@mongo:27017");
             Mongo myMongo = new Mongo(mongoURL, "OCPI");
@@ -75,7 +89,7 @@ http://34.136.104.208:8080/OCPI_2/simulation.jsp?MAXIMUM_PLAN=73&HIGH_PLAN=22&ME
             //List<Location> myLocations = myMongo.find("locations", myLocationFilter, false, Location.class);
             //-------------            
             out.println("<h1>" + locationId + "</h1>");
-            String[] connectorIds = {"C1", "C2", "C3", "C4"};
+
             EVChargingStation station = new EVChargingStation(locationId, connectorIds, MAXIMUM_PLAN, HIGH_PLAN, MEDIUM_PLAN, LOW_PLAN);
             DateTimeFormatter formatter = EVChargingStation.FORMATER;
             LocalDateTime T1 = LocalDateTime.parse("2025-01-01T00:00:00.000", formatter);
@@ -86,15 +100,14 @@ http://34.136.104.208:8080/OCPI_2/simulation.jsp?MAXIMUM_PLAN=73&HIGH_PLAN=22&ME
                     Filters.lte("mydate", T2));
             Bson filter = Filters.and(locationFilter, timeFilter);
             Collection<Session> sessions = myMongo.find("sessions", filter, true, Session.class);
-            
-            Map<String, Double> erlangsPerHour = EVChargingStation.getUtilizationPerHour(sessions, new TimeStamp1(T1).toLocalDateTime(), new TimeStamp1(T2).toLocalDateTime(),connectorIds.length);
+            Map<String, Double> erlangsPerHour = EVChargingStation.getUtilizationPerHour(sessions, new TimeStamp1(T1).toLocalDateTime(), new TimeStamp1(T2).toLocalDateTime(), connectorIds.length);
             out.println("<b>erlangsPerHour.size()====" + erlangsPerHour.size() + "</b>");
             //erlangsPerHour.forEach((String k, Double v)->System.out.println("<p>"+k+" "+v) );
             myMongo.dropCollection("sessions");
             myMongo.dropCollection("events");
             station.simulate_period(T1, T2, erlangsPerHour);
             //-------------- save sessions ----------------------------     
- 
+
             out.println("<h1>sessions</h1>");
             station.getSessions()
                     .forEach(chs -> {

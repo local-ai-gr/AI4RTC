@@ -99,7 +99,7 @@ public class sessionsGanntServlet extends HttpServlet {
             Collection<Event> events = myMongo.find("events", filter, true, Event.class);
             //-------------------------------
             String type = request.getParameter("type");
-            //
+            //----------------- gantt sessions --------------------------
             if (type == null || type.isEmpty() || type.equals("gannt")) {
                 List<GanntObj> ganntList = new ArrayList<>();
                 sessions.stream().
@@ -142,7 +142,7 @@ public class sessionsGanntServlet extends HttpServlet {
                                 ganntList.add(new GanntObj(id++, "", eventStart, eventEnd, groupName, "background-color: red; border-color: orange;", 0.0));
                             }else if (e.getEventType() == EventType.DOWNGRADE_EVENT_PREDICTIVE) {
                                 int myPredictionPeriodInMinutes = predictionPeriodInMinutes + new Random().nextInt(40);
-                                ganntList.add(new GanntObj(id++, "", eventEnd, ldtEnd.plusMinutes(myPredictionPeriodInMinutes).format(FORMATER), "Predictive periods", "background-color: orange; border-color: blue;", 0.0));
+                                ganntList.add(new GanntObj(id++, "", eventEnd, ldtEnd.plusMinutes(myPredictionPeriodInMinutes).format(FORMATER), "Predictive periods", "background-color: orange; border-color: orange;", 0.0));
 
                             }
                         });
@@ -199,13 +199,18 @@ public class sessionsGanntServlet extends HttpServlet {
                 out.println(new Gson().toJson(ganntList));
                 //------------------------ erlangs --------------------------------------------
             } else if (type.equals("erlangs")) {
+                // ----- find numberOfConnectors ---
+                Collection<Session> allLocationSessions = myMongo.find("sessions", locationFilter, true, Session.class);
+                long numberOfConnectors = allLocationSessions.stream().map(s-> s.getConnector_id()).distinct().count();
+                System.out.println("numberOfConnectors="+numberOfConnectors);
+                // ---------------
                 List<GanntObj> ganntList = new ArrayList<>();
                 System.out.println("\n\n--- Utilization ---");
                 Location myLocation = locations.stream().filter(l -> l.getId().equals(location)).findAny().orElse(null);
 
                 if (myLocation != null) {
                     try {
-                        Map<String, Double> erlangsPerHour = getUtilizationPerHour(sessions, T1, T2, 4);
+                        Map<String, Double> erlangsPerHour = getUtilizationPerHour(sessions, T1, T2, numberOfConnectors);
                         erlangsPerHour.forEach((k, v) -> {
                             try {
                                 LocalDateTime start = LocalDateTime.parse(k, FORMATER);
