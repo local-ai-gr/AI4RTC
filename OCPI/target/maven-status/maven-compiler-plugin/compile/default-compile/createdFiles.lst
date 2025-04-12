@@ -22,6 +22,7 @@ getters\SessionsGetter.class
 getters\LocationsGetterDaemon.class
 dataServlets\sessionsGanntServlet.class
 model\Connector.class
+simulation\SimulationData.class
 model\CDR.class
 model\CDR$CdrData1$Cost.class
 simulation\EventType.class
