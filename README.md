@@ -8,3 +8,6 @@ To improve the model, we experimented on:
 3.	Incorporate additional features such as weather data, holidays, and other relevant factors.
 4.	Experiment with other architectures like GRU, Transformer models, or advanced ensemble methods.
 This is a robust starting point for a state-of-the-art time series forecasting model, but further customiza-tion based on your specific data and use case will help achieve optimal results.
+
+The OCPI modules comprise a robust development of the communication of our AI4CS - CNAP Platform with the CPMS of an EV Charging network. It actuates the commands thar are decided based on the predeicted power peaks by the AI forecasting.
+The implementation follows the OCPI v.2.2 standards of the EV Roaming Foundation

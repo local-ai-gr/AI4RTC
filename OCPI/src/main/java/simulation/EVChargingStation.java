@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -65,12 +66,11 @@ public class EVChargingStation {
         this.locationId = locationId;
     }
 
-    public void simulate_period(LocalDateTime T1, LocalDateTime T2, Map<String, Double> erlangsPerHour) {
-
+    public void simulate_period(LocalDateTime T1, LocalDateTime T2, int visitsExpected) {
         LocalDateTime T = T1;
         while (T.isBefore(T2)) {
             System.out.println("Simulating day   " + T.format(FORMATER));
-            simulateDay(T1, 30, T, erlangsPerHour);
+            simulateDay(T1, 30, T, visitsExpected);
             T = T.plusDays(1);
         }
         // correct the null end session of the last Charging_period        
@@ -91,12 +91,12 @@ public class EVChargingStation {
         });
     }
 
-    public void simulateDay(LocalDateTime firstDay, int predictDay, LocalDateTime day, Map<String, Double> erlangsPerHour) {
+    public void simulateDay(LocalDateTime firstDay, int predictDay, LocalDateTime day, int visitsExpected) {
         LocalDateTime now = LocalDateTime.now();
-        int sessionCount = 10 + random.nextInt(11);
+        int sessionCount = 10 + random.nextInt(visitsExpected);
         List<Event> primaryEvents = new ArrayList<>();
         //------ add predictiveDegradations -----
-        Set<LocalDateTime> predictiveDegradations = generateTimesForDegradations(erlangsPerHour).stream()
+        Set<LocalDateTime> predictiveDegradations = generateTimesForDegradations(day).stream()
                 .filter(t -> firstDay.plusDays(predictDay).isBefore(t))
                 .collect(toSet());
         System.out.println("predictiveDegradations:" + predictiveDegradations.size() + " day:" + day.format(FORMATER));
@@ -209,17 +209,14 @@ public class EVChargingStation {
         return day.with(LocalTime.of(hour, minute));
     }
 
-    public static Set<LocalDateTime> generateTimesForDegradations(Map<String, Double> erlangsPerHour) {
-        //DateTimeFormatter myFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH");
-        System.out.println("<b>erlangsPerHour.size()====" + erlangsPerHour.size() + "</b>");
-        erlangsPerHour.forEach((String k, Double v) -> System.out.println("<p>" + k + " " + v));
-        return erlangsPerHour.entrySet().stream()
-                .filter((Entry<String, Double> e) -> e.getValue() >= 0.8)
-                .map((Entry<String, Double> e) -> {
-                    int myPredictionPeriodStartErlier = 40+new Random().nextInt(40);
-                    return LocalDateTime.parse(e.getKey()).minusMinutes(myPredictionPeriodStartErlier);
-                })
-                .collect(toSet());
+    private Set<LocalDateTime> generateTimesForDegradations(LocalDateTime day) {
+        Set<LocalDateTime> res = new HashSet<>();
+        for (int i = 0; i < 3; i++) {//just 3 predictions per day
+            int hour =8;
+            int minute = random.nextInt(59);
+            res.add(day.with(LocalTime.of(hour, minute)));
+        }
+        return res;
     }
 
     /**
